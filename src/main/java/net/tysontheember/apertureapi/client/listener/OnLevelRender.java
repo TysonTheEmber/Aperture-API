@@ -75,7 +75,8 @@ public class OnLevelRender {
                 setupCameraAnimIdeCamera();
             }
 
-            if (!ClientUtil.hideGui()) {
+            // Hide all keyframes/lines while in preview mode
+            if (!ClientUtil.hideGui() && !CameraAnimIdeCache.PREVIEW) {
                 renderCameraAnimIdePath(event);
             }
         }

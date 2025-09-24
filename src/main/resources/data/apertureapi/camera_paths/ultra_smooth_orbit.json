@@ -1,0 +1,38 @@
+{
+  "schema": 1,
+  "id": "ultra_smooth_orbit",
+  "loop": true,
+  "speed": 1.0,
+  "fov": { "mode": "fixed", "default": 70.0 },
+  "keyframes": [
+    { "time": 0.0, "pos": { "x": 12.0, "y": 72.0, "z": 0.0 },   "lookAt": { "x": 0, "y": 72, "z": 0 } },
+    { "time": 1.0, "pos": { "x": 8.49, "y": 72.0, "z": 8.49 },  "lookAt": { "x": 0, "y": 72, "z": 0 } },
+    { "time": 2.0, "pos": { "x": 0.0,  "y": 72.0, "z": 12.0 },  "lookAt": { "x": 0, "y": 72, "z": 0 } },
+    { "time": 3.0, "pos": { "x": -8.49,"y": 72.0, "z": 8.49 },  "lookAt": { "x": 0, "y": 72, "z": 0 } },
+    { "time": 4.0, "pos": { "x": -12.0,"y": 72.0, "z": 0.0 },   "lookAt": { "x": 0, "y": 72, "z": 0 } },
+    { "time": 5.0, "pos": { "x": -8.49,"y": 72.0, "z": -8.49 }, "lookAt": { "x": 0, "y": 72, "z": 0 } },
+    { "time": 6.0, "pos": { "x": 0.0,  "y": 72.0, "z": -12.0 }, "lookAt": { "x": 0, "y": 72, "z": 0 } },
+    { "time": 7.0, "pos": { "x": 8.49, "y": 72.0, "z": -8.49 }, "lookAt": { "x": 0, "y": 72, "z": 0 } },
+    { "time": 8.0, "pos": { "x": 12.0, "y": 72.0, "z": 0.0 },   "lookAt": { "x": 0, "y": 72, "z": 0 } }
+  ],
+  "path": {
+    "position": { 
+      "interp": "bezier", 
+      "tension": 0.0,
+      "easing": "easeInOut"
+    },
+    "rotation": { 
+      "interp": "bezier",
+      "easing": "easeInOut"
+    },
+    "fov": {
+      "interp": "bezier",
+      "easing": "easeInOut" 
+    }
+  },
+  "smoothing": {
+    "enabled": true,
+    "jitterPrevention": true,
+    "temporalSmoothing": 0.15
+  }
+}

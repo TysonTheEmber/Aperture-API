@@ -1,0 +1,12 @@
+{
+  "schema": 1,
+  "id": "slerp_rot",
+  "loop": false,
+  "speed": 1.0,
+  "keyframes": [
+    { "time": 0.0, "pos": { "x": 0, "y": 70, "z": 0 }, "rot": { "yaw": 0, "pitch": 0 } },
+    { "time": 1.5, "pos": { "x": 4, "y": 70, "z": 0 }, "rot": { "yaw": 90, "pitch": -10 } },
+    { "time": 3.0, "pos": { "x": 8, "y": 70, "z": 0 }, "rot": { "yaw": 180, "pitch": -15 } }
+  ],
+  "path": { "position": { "interp": "linear" }, "rotation": { "interp": "slerp" } }
+}

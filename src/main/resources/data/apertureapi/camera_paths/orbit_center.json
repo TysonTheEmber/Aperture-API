@@ -1,0 +1,18 @@
+{
+  "schema": 1,
+  "id": "orbit_center",
+  "loop": true,
+  "speed": 1.0,
+  "fov": { "mode": "fixed", "default": 75.0 },
+  "keyframes": [
+    { "time": 0.0, "pos": { "x": 8.0,  "y": 72.0, "z": 0.0 },  "lookAt": { "x": 0, "y": 72, "z": 0 } },
+    { "time": 2.0, "pos": { "x": 0.0,  "y": 72.0, "z": 8.0 },  "lookAt": { "x": 0, "y": 72, "z": 0 } },
+    { "time": 4.0, "pos": { "x": -8.0, "y": 72.0, "z": 0.0 },  "lookAt": { "x": 0, "y": 72, "z": 0 } },
+    { "time": 6.0, "pos": { "x": 0.0,  "y": 72.0, "z": -8.0 }, "lookAt": { "x": 0, "y": 72, "z": 0 } },
+    { "time": 8.0, "pos": { "x": 8.0,  "y": 72.0, "z": 0.0 },  "lookAt": { "x": 0, "y": 72, "z": 0 } }
+  ],
+  "path": {
+    "position": { "interp": "catmullRom", "tension": 0.0 },
+    "rotation": { "interp": "lookAt" }
+  }
+}

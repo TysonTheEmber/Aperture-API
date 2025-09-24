@@ -26,6 +26,19 @@ public class Animator {
     private final Vector3f rotation = new Vector3f();
     private final Matrix3f rotationMatrix = new Matrix3f();
 
+    // Constant-speed reparameterization (duration-based) and quaternion orientation flags
+    private boolean constantSpeed = true;
+    private boolean quaternionOrientation = true;
+
+    // Active segment arc-length cache
+    private static final class SegmentLUT {
+        int preTime;
+        int nextTime;
+        net.tysontheember.apertureapi.common.animation.PathInterpolator mode;
+        net.tysontheember.apertureapi.path.ArcLengthLUT lut;
+    }
+    private SegmentLUT currentLUT;
+
     public void tick() {
         if (!playing || path == null) {
             return;
@@ -107,6 +120,7 @@ public class Animator {
 
     public void setPathAndPlay(GlobalCameraPath path) {
         this.path = path;
+        this.currentLUT = null; // reset LUT cache
         resetAndPlay();
     }
 
@@ -117,6 +131,7 @@ public class Animator {
         rotationMatrix
                 .identity()
                 .rotateY((360 - rotation.y) * Mth.DEG_TO_RAD);
+        this.currentLUT = null; // reset LUT cache
         resetAndPlay();
     }
 
@@ -163,15 +178,29 @@ public class Animator {
         CameraKeyframe next = nextEntry.getValue();
 
         float t1;
-        // Position interpolation
+        // Position interpolation (time easing)
         if (next.getPosTimeInterpolator() == TimeInterpolator.BEZIER) {
             t1 = next.getPosBezier().interpolate(t);
         } else {
             t1 = t;
         }
 
+        // If constantSpeed is on, remap t1 by arc-length LUT for this segment
+        float tPos = t1;
+        if (constantSpeed && next.getPathInterpolator() != net.tysontheember.apertureapi.common.animation.PathInterpolator.STEP) {
+            ensureSegmentLUT(path, preEntry, nextEntry, next.getPathInterpolator());
+            if (currentLUT != null && currentLUT.lut != null && currentLUT.lut.totalLength() > 1e-6f) {
+                float desired = currentLUT.lut.totalLength() * t1;
+                tPos = currentLUT.lut.tForDistance(desired);
+            }
+        }
+
         switch (next.getPathInterpolator()) {
-            case LINEAR -> line(t1, pre.getPos(), next.getPos(), posDest);
+            case LINEAR -> line(tPos, pre.getPos(), next.getPos(), posDest);
+            case COSINE -> {
+                float tCos = (1.0f - (float) Math.cos(Math.PI * tPos)) * 0.5f;
+                line(tCos, pre.getPos(), next.getPos(), posDest);
+            }
             case SMOOTH -> {
                 Vector3f p0, p3;
                 Map.Entry<Integer, CameraKeyframe> prePre = path.getPreEntry(preEntry.getKey());
@@ -190,13 +219,26 @@ public class Animator {
                     p3 = nextNext.getValue().getPos();
                 }
 
-                catmullRom(t1, p0, pre.getPos(), next.getPos(), p3, posDest);
+                catmullRom(tPos, p0, pre.getPos(), next.getPos(), p3, posDest);
             }
-            case BEZIER -> next.getPathBezier().interpolate(t1, pre.getPos(), next.getPos(), posDest);
+            case CATMULL_UNIFORM, CATMULL_CENTRIPETAL, CATMULL_CHORDAL -> {
+                Vector3f p0, p3;
+                Map.Entry<Integer, CameraKeyframe> prePre = path.getPreEntry(preEntry.getKey());
+                if (prePre == null) p0 = pre.getPos(); else p0 = prePre.getValue().getPos();
+                Map.Entry<Integer, CameraKeyframe> nextNext = path.getNextEntry(nextEntry.getKey());
+                if (nextNext == null) p3 = next.getPos(); else p3 = nextNext.getValue().getPos();
+                float alpha = switch (next.getPathInterpolator()) {
+                    case CATMULL_UNIFORM -> 0.0f;
+                    case CATMULL_CHORDAL -> 1.0f;
+                    default -> 0.5f; // CATMULL_CENTRIPETAL default for stability
+                };
+                net.tysontheember.apertureapi.path.CatmullRom.eval(tPos, p0, pre.getPos(), next.getPos(), p3, alpha, posDest);
+            }
+            case BEZIER -> next.getPathBezier().interpolate(tPos, pre.getPos(), next.getPos(), posDest);
             case STEP -> posDest.set(pre.getPos());
         }
 
-        // Rotation interpolation
+        // Rotation interpolation (time easing for rotation)
         if (next.getRotTimeInterpolator() == TimeInterpolator.BEZIER) {
             t1 = next.getRotBezier().interpolate(t);
         } else {
@@ -205,8 +247,17 @@ public class Animator {
 
         Vector3f preRot = pre.getRot();
         Vector3f nextRot = next.getRot();
-        // Use smooth rotation interpolation to prevent angle wrapping issues
-        net.tysontheember.apertureapi.common.animation.JitterPrevention.smoothRotationLerp(t1, preRot, nextRot, rotDest);
+        if (quaternionOrientation) {
+            // Quaternion slerp orientation blending
+            org.joml.Quaternionf qa = net.tysontheember.apertureapi.path.OrientationUtil.yprDegToQuat(preRot.y, preRot.x, preRot.z, new org.joml.Quaternionf());
+            org.joml.Quaternionf qb = net.tysontheember.apertureapi.path.OrientationUtil.yprDegToQuat(nextRot.y, nextRot.x, nextRot.z, new org.joml.Quaternionf());
+            org.joml.Quaternionf qOut = new org.joml.Quaternionf();
+            net.tysontheember.apertureapi.path.OrientationUtil.slerp(qa, qb, t1, qOut);
+            net.tysontheember.apertureapi.path.OrientationUtil.quatToYprDeg(qOut, rotDest);
+        } else {
+            // Fallback to angle-aware lerp
+            net.tysontheember.apertureapi.common.animation.JitterPrevention.smoothRotationLerp(t1, preRot, nextRot, rotDest);
+        }
 
         // FOV interpolation
         if (next.getFovTimeInterpolator() == TimeInterpolator.BEZIER) {
@@ -224,5 +275,49 @@ public class Animator {
 
         return true;
     }
+
+    // Build or reuse LUT for the active segment, matching segment endpoints and interpolation mode
+    private void ensureSegmentLUT(GlobalCameraPath path, Map.Entry<Integer, CameraKeyframe> preEntry, Map.Entry<Integer, CameraKeyframe> nextEntry, net.tysontheember.apertureapi.common.animation.PathInterpolator mode) {
+        int preTime = preEntry.getKey();
+        int nextTime = nextEntry.getKey();
+        if (currentLUT != null && currentLUT.preTime == preTime && currentLUT.nextTime == nextTime && currentLUT.mode == mode) {
+            return;
+        }
+        currentLUT = new SegmentLUT();
+        currentLUT.preTime = preTime;
+        currentLUT.nextTime = nextTime;
+        currentLUT.mode = mode;
+
+        final CameraKeyframe pre = preEntry.getValue();
+        final CameraKeyframe next = nextEntry.getValue();
+        // Neighbors for catmull variants
+        Vector3f p0, p3;
+        Map.Entry<Integer, CameraKeyframe> prePre = path.getPreEntry(preEntry.getKey());
+        p0 = (prePre == null) ? pre.getPos() : prePre.getValue().getPos();
+        Map.Entry<Integer, CameraKeyframe> nextNext = path.getNextEntry(nextEntry.getKey());
+        p3 = (nextNext == null) ? next.getPos() : nextNext.getValue().getPos();
+
+        net.tysontheember.apertureapi.path.ArcLengthLUT.Evaluator f = (tt, out) -> {
+            switch (mode) {
+                case LINEAR -> net.tysontheember.apertureapi.InterpolationMath.line(tt, pre.getPos(), next.getPos(), out);
+                case COSINE -> {
+                    float tCos = (1.0f - (float) Math.cos(Math.PI * tt)) * 0.5f;
+                    net.tysontheember.apertureapi.InterpolationMath.line(tCos, pre.getPos(), next.getPos(), out);
+                }
+                case SMOOTH -> net.tysontheember.apertureapi.InterpolationMath.catmullRom(tt, p0, pre.getPos(), next.getPos(), p3, out);
+                case CATMULL_UNIFORM -> net.tysontheember.apertureapi.path.CatmullRom.eval(tt, p0, pre.getPos(), next.getPos(), p3, 0.0f, out);
+                case CATMULL_CENTRIPETAL -> net.tysontheember.apertureapi.path.CatmullRom.eval(tt, p0, pre.getPos(), next.getPos(), p3, 0.5f, out);
+                case CATMULL_CHORDAL -> net.tysontheember.apertureapi.path.CatmullRom.eval(tt, p0, pre.getPos(), next.getPos(), p3, 1.0f, out);
+                case BEZIER -> pre.getPathBezier().interpolate(tt, pre.getPos(), next.getPos(), out);
+                case STEP -> out.set(pre.getPos());
+            }
+            return out;
+        };
+        currentLUT.lut = new net.tysontheember.apertureapi.path.ArcLengthLUT(f, 64);
+    }
+
+    // Optional toggles
+    public Animator setConstantSpeed(boolean enabled) { this.constantSpeed = enabled; return this; }
+    public Animator setQuaternionOrientation(boolean enabled) { this.quaternionOrientation = enabled; return this; }
 }
 

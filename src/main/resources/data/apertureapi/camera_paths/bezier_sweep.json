@@ -1,0 +1,13 @@
+{
+  "schema": 1,
+  "id": "bezier_sweep",
+  "loop": false,
+  "speed": 1.0,
+  "easing": "linear",
+  "keyframes": [
+    { "time": 0.0, "pos": { "x": -8, "y": 72, "z": -8 }, "rot": { "yaw": 45, "pitch": -5 }, "easeOut": "quadOut" },
+    { "time": 1.5, "pos": { "x": 0,  "y": 74, "z": 0  },  "rot": { "yaw": 90, "pitch": -10 } },
+    { "time": 3.0, "pos": { "x": 10, "y": 73, "z": 4  },  "rot": { "yaw": 120, "pitch": -8 }, "easeIn": "quadIn" }
+  ],
+  "path": { "position": { "interp": "bezier" }, "rotation": { "interp": "slerp" } }
+}

@@ -161,6 +161,219 @@ public class ModKeyClicked {
 
             CameraAnimIdeCache.getPath().setNativeMode(false);
         }
+
+        // Keyframe editing functionality
+        while (ModKeyMapping.DUPLICATE_KEYFRAME.get().consumeClick()) {
+            if (!CameraAnimIdeCache.EDIT || CameraAnimIdeCache.getSelectedPoint().getPointTime() < 0) {
+                continue;
+            }
+
+            CameraAnimIdeCache.SelectedPoint selectedPoint = CameraAnimIdeCache.getSelectedPoint();
+            int selectedTime = selectedPoint.getPointTime();
+            GlobalCameraPath path = CameraAnimIdeCache.getPath();
+            CameraKeyframe originalKeyframe = path.getPoint(selectedTime);
+            
+            if (originalKeyframe != null) {
+                // Find a new time slot (increment until we find an unused time)
+                int newTime = selectedTime + 1;
+                while (path.getPoint(newTime) != null) {
+                    newTime++;
+                }
+                
+                // Create a copy of the keyframe
+                CameraKeyframe duplicateKeyframe = originalKeyframe.copy();
+                path.add(newTime, duplicateKeyframe);
+                
+                // Select the new duplicated keyframe
+                selectedPoint.setSelected(newTime);
+            }
+        }
+
+        while (ModKeyMapping.UPDATE_KEYFRAME_FROM_CAMERA.get().consumeClick()) {
+            if (!CameraAnimIdeCache.EDIT || CameraAnimIdeCache.getSelectedPoint().getPointTime() < 0) {
+                continue;
+            }
+
+            CameraAnimIdeCache.SelectedPoint selectedPoint = CameraAnimIdeCache.getSelectedPoint();
+            int selectedTime = selectedPoint.getPointTime();
+            GlobalCameraPath path = CameraAnimIdeCache.getPath();
+            CameraKeyframe keyframe = path.getPoint(selectedTime);
+            
+            if (keyframe != null) {
+                Minecraft mc = Minecraft.getInstance();
+                Camera camera = mc.gameRenderer.getMainCamera();
+                
+                // Update position and rotation from current camera
+                keyframe.setPos((float)camera.getPosition().x, (float)camera.getPosition().y, (float)camera.getPosition().z);
+                keyframe.getRot().set(
+                    Mth.wrapDegrees(camera.getXRot()),
+                    Mth.wrapDegrees(camera.getYRot()),
+                    0 // Roll remains unchanged
+                );
+                keyframe.setFov(mc.options.fov().get());
+            }
+        }
+
+        while (ModKeyMapping.NEXT_KEYFRAME.get().consumeClick()) {
+            if (!CameraAnimIdeCache.EDIT) {
+                continue;
+            }
+
+            CameraAnimIdeCache.SelectedPoint selectedPoint = CameraAnimIdeCache.getSelectedPoint();
+            GlobalCameraPath path = CameraAnimIdeCache.getPath();
+            
+            if (selectedPoint.getPointTime() < 0) {
+                // No keyframe selected, select the first one
+                Map.Entry<Integer, CameraKeyframe> first = path.getNextEntry(Integer.MIN_VALUE);
+                if (first != null) {
+                    selectedPoint.setSelected(first.getKey());
+                }
+            } else {
+                // Select next keyframe
+                Map.Entry<Integer, CameraKeyframe> next = path.getNextEntry(selectedPoint.getPointTime());
+                if (next != null) {
+                    selectedPoint.setSelected(next.getKey());
+                }
+            }
+        }
+
+        while (ModKeyMapping.PREVIOUS_KEYFRAME.get().consumeClick()) {
+            if (!CameraAnimIdeCache.EDIT) {
+                continue;
+            }
+
+            CameraAnimIdeCache.SelectedPoint selectedPoint = CameraAnimIdeCache.getSelectedPoint();
+            GlobalCameraPath path = CameraAnimIdeCache.getPath();
+            
+            if (selectedPoint.getPointTime() < 0) {
+                // No keyframe selected, select the last one
+                Map.Entry<Integer, CameraKeyframe> last = path.getPreEntry(Integer.MAX_VALUE);
+                if (last != null) {
+                    selectedPoint.setSelected(last.getKey());
+                }
+            } else {
+                // Select previous keyframe
+                Map.Entry<Integer, CameraKeyframe> prev = path.getPreEntry(selectedPoint.getPointTime());
+                if (prev != null) {
+                    selectedPoint.setSelected(prev.getKey());
+                }
+            }
+        }
+
+        while (ModKeyMapping.CYCLE_INTERPOLATION.get().consumeClick()) {
+            if (!CameraAnimIdeCache.EDIT || CameraAnimIdeCache.getSelectedPoint().getPointTime() < 0) {
+                continue;
+            }
+
+            CameraAnimIdeCache.SelectedPoint selectedPoint = CameraAnimIdeCache.getSelectedPoint();
+            int selectedTime = selectedPoint.getPointTime();
+            GlobalCameraPath path = CameraAnimIdeCache.getPath();
+            CameraKeyframe keyframe = path.getPoint(selectedTime);
+            
+            if (keyframe != null) {
+                // Cycle through PathInterpolator values
+                PathInterpolator[] interpolators = PathInterpolator.values();
+                PathInterpolator current = keyframe.getPathInterpolator();
+                
+                int currentIndex = current.index;
+                int nextIndex = (currentIndex + 1) % interpolators.length;
+                
+                PathInterpolator next = PathInterpolator.fromIndex(nextIndex);
+                keyframe.setPathInterpolator(next);
+                
+                // Update bezier data for the new interpolation mode
+                path.updateBezier(selectedTime);
+            }
+        }
+
+        while (ModKeyMapping.DECREASE_FOV.get().consumeClick()) {
+            if (!CameraAnimIdeCache.EDIT || CameraAnimIdeCache.getSelectedPoint().getPointTime() < 0) {
+                continue;
+            }
+
+            CameraAnimIdeCache.SelectedPoint selectedPoint = CameraAnimIdeCache.getSelectedPoint();
+            int selectedTime = selectedPoint.getPointTime();
+            GlobalCameraPath path = CameraAnimIdeCache.getPath();
+            CameraKeyframe keyframe = path.getPoint(selectedTime);
+            
+            if (keyframe != null) {
+                float currentFov = keyframe.getFov();
+                float newFov = Math.max(1.0f, currentFov - 5.0f); // Decrease by 5, minimum 1
+                keyframe.setFov(newFov);
+            }
+        }
+
+        while (ModKeyMapping.INCREASE_FOV.get().consumeClick()) {
+            if (!CameraAnimIdeCache.EDIT || CameraAnimIdeCache.getSelectedPoint().getPointTime() < 0) {
+                continue;
+            }
+
+            CameraAnimIdeCache.SelectedPoint selectedPoint = CameraAnimIdeCache.getSelectedPoint();
+            int selectedTime = selectedPoint.getPointTime();
+            GlobalCameraPath path = CameraAnimIdeCache.getPath();
+            CameraKeyframe keyframe = path.getPoint(selectedTime);
+            
+            if (keyframe != null) {
+                float currentFov = keyframe.getFov();
+                float newFov = Math.min(179.0f, currentFov + 5.0f); // Increase by 5, maximum 179
+                keyframe.setFov(newFov);
+            }
+        }
+
+        while (ModKeyMapping.INSERT_KEYFRAME_BETWEEN.get().consumeClick()) {
+            if (!CameraAnimIdeCache.EDIT || CameraAnimIdeCache.getSelectedPoint().getPointTime() < 0) {
+                continue;
+            }
+
+            CameraAnimIdeCache.SelectedPoint selectedPoint = CameraAnimIdeCache.getSelectedPoint();
+            int selectedTime = selectedPoint.getPointTime();
+            GlobalCameraPath path = CameraAnimIdeCache.getPath();
+            
+            Map.Entry<Integer, CameraKeyframe> current = path.getEntry(selectedTime);
+            Map.Entry<Integer, CameraKeyframe> next = path.getNextEntry(selectedTime);
+            
+            if (current != null && next != null) {
+                int insertTime = (selectedTime + next.getKey()) / 2; // Insert at midpoint
+                
+                // Ensure we don't overwrite an existing keyframe
+                while (path.getPoint(insertTime) != null) {
+                    insertTime++;
+                }
+                
+                // Interpolate position between current and next keyframes
+                Vector3f currentPos = current.getValue().getPos();
+                Vector3f nextPos = next.getValue().getPos();
+                Vector3f newPos = new Vector3f(
+                    (currentPos.x + nextPos.x) / 2,
+                    (currentPos.y + nextPos.y) / 2,
+                    (currentPos.z + nextPos.z) / 2
+                );
+                
+                // Interpolate rotation
+                Vector3f currentRot = current.getValue().getRot();
+                Vector3f nextRot = next.getValue().getRot();
+                Vector3f newRot = new Vector3f(
+                    (currentRot.x + nextRot.x) / 2,
+                    Mth.wrapDegrees((currentRot.y + nextRot.y) / 2), // Handle yaw wrapping
+                    (currentRot.z + nextRot.z) / 2
+                );
+                
+                // Interpolate FOV
+                float currentFov = current.getValue().getFov();
+                float nextFov = next.getValue().getFov();
+                float newFov = (currentFov + nextFov) / 2;
+                
+                // Create new keyframe with the interpolated values
+                CameraKeyframe newKeyframe = new CameraKeyframe(
+                    newPos, newRot, newFov, PathInterpolator.LINEAR
+                );
+                
+                path.add(insertTime, newKeyframe);
+                
+                // Select the newly inserted keyframe
+                selectedPoint.setSelected(insertTime);
+            }
+        }
     }
 }
 

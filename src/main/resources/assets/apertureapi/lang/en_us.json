@@ -31,6 +31,14 @@
   "key.apertureapi.clean": "Clean",
   "key.apertureapi.native_center": "Native Center",
   "key.apertureapi.remove_native_center": "Remove Native Center",
+  "key.apertureapi.duplicate_keyframe": "Duplicate Keyframe",
+  "key.apertureapi.update_keyframe_from_camera": "Update Keyframe from Camera",
+  "key.apertureapi.next_keyframe": "Next Keyframe",
+  "key.apertureapi.previous_keyframe": "Previous Keyframe",
+  "key.apertureapi.cycle_interpolation": "Cycle Interpolation Mode",
+  "key.apertureapi.decrease_fov": "Decrease FOV",
+  "key.apertureapi.increase_fov": "Increase FOV",
+  "key.apertureapi.insert_keyframe_between": "Insert Keyframe Between",
 
   "commands.apertureapi.play.description": "Play a camera path with optional speed and loop settings",
   "commands.apertureapi.play.usage": "Usage: /camera play <name> [speed] [loop] [target]",
@@ -363,5 +371,21 @@
   "tips.banking.realistic": "Use banking strength between 0.5-1.5 for realistic vehicle-like movement.",
   "tips.speed.constant": "Use Speed Mode for constant velocity, Duration Mode for timed sequences.",
   "tips.performance.arc_length": "Arc-length parameterization ensures smooth playback but requires more computation.",
-  "tips.visualization.debug": "Enable path visualization to see the actual curve your camera will follow."
+  "tips.visualization.debug": "Enable path visualization to see the actual curve your camera will follow.",
+
+  "keyframe.duplicate": "Duplicate Selected Keyframe",
+  "keyframe.duplicate.tooltip": "Create a copy of the selected keyframe at the next available time slot.",
+  "keyframe.update_from_camera": "Update from Camera",
+  "keyframe.update_from_camera.tooltip": "Update the selected keyframe's position, rotation, and FOV to match the current camera.",
+  "keyframe.navigation.next": "Navigate to Next",
+  "keyframe.navigation.next.tooltip": "Select and jump to the next keyframe in the timeline.",
+  "keyframe.navigation.previous": "Navigate to Previous",
+  "keyframe.navigation.previous.tooltip": "Select and jump to the previous keyframe in the timeline.",
+  "keyframe.interpolation.cycle": "Cycle Interpolation",
+  "keyframe.interpolation.cycle.tooltip": "Cycle through interpolation modes: Linear → Smooth → Bezier → Step → Cosine → Catmull variants.",
+  "keyframe.fov.adjust": "Adjust FOV",
+  "keyframe.fov.decrease.tooltip": "Decrease the selected keyframe's field of view by 5 degrees (min: 1°).",
+  "keyframe.fov.increase.tooltip": "Increase the selected keyframe's field of view by 5 degrees (max: 179°).",
+  "keyframe.insert_between": "Insert Between Keyframes",
+  "keyframe.insert_between.tooltip": "Create a new keyframe interpolated halfway between the selected keyframe and the next one."
 }

@@ -161,6 +161,79 @@ public class ModKeyMapping {
                     "key.categories." + ApertureAPI.MODID
             ));
 
+    // Keyframe editing keybinds
+    public static final Lazy<KeyMapping> DUPLICATE_KEYFRAME = register(
+            new KeyMapping(
+                    "key." + ApertureAPI.MODID + ".duplicate_keyframe",
+                    KeyConflictContext.IN_GAME,
+                    InputConstants.Type.KEYSYM,
+                    GLFW.GLFW_KEY_D,
+                    "key.categories." + ApertureAPI.MODID
+            ));
+
+    public static final Lazy<KeyMapping> UPDATE_KEYFRAME_FROM_CAMERA = register(
+            new KeyMapping(
+                    "key." + ApertureAPI.MODID + ".update_keyframe_from_camera",
+                    KeyConflictContext.IN_GAME,
+                    InputConstants.Type.KEYSYM,
+                    GLFW.GLFW_KEY_U,
+                    "key.categories." + ApertureAPI.MODID
+            ));
+
+    public static final Lazy<KeyMapping> NEXT_KEYFRAME = register(
+            new KeyMapping(
+                    "key." + ApertureAPI.MODID + ".next_keyframe",
+                    KeyConflictContext.IN_GAME,
+                    InputConstants.Type.KEYSYM,
+                    GLFW.GLFW_KEY_PAGE_DOWN,
+                    "key.categories." + ApertureAPI.MODID
+            ));
+
+    public static final Lazy<KeyMapping> PREVIOUS_KEYFRAME = register(
+            new KeyMapping(
+                    "key." + ApertureAPI.MODID + ".previous_keyframe",
+                    KeyConflictContext.IN_GAME,
+                    InputConstants.Type.KEYSYM,
+                    GLFW.GLFW_KEY_PAGE_UP,
+                    "key.categories." + ApertureAPI.MODID
+            ));
+
+    public static final Lazy<KeyMapping> CYCLE_INTERPOLATION = register(
+            new KeyMapping(
+                    "key." + ApertureAPI.MODID + ".cycle_interpolation",
+                    KeyConflictContext.IN_GAME,
+                    InputConstants.Type.KEYSYM,
+                    GLFW.GLFW_KEY_I,
+                    "key.categories." + ApertureAPI.MODID
+            ));
+
+    public static final Lazy<KeyMapping> DECREASE_FOV = register(
+            new KeyMapping(
+                    "key." + ApertureAPI.MODID + ".decrease_fov",
+                    KeyConflictContext.IN_GAME,
+                    InputConstants.Type.KEYSYM,
+                    GLFW.GLFW_KEY_MINUS,
+                    "key.categories." + ApertureAPI.MODID
+            ));
+
+    public static final Lazy<KeyMapping> INCREASE_FOV = register(
+            new KeyMapping(
+                    "key." + ApertureAPI.MODID + ".increase_fov",
+                    KeyConflictContext.IN_GAME,
+                    InputConstants.Type.KEYSYM,
+                    GLFW.GLFW_KEY_EQUAL,
+                    "key.categories." + ApertureAPI.MODID
+            ));
+
+    public static final Lazy<KeyMapping> INSERT_KEYFRAME_BETWEEN = register(
+            new KeyMapping(
+                    "key." + ApertureAPI.MODID + ".insert_keyframe_between",
+                    KeyConflictContext.IN_GAME,
+                    InputConstants.Type.KEYSYM,
+                    GLFW.GLFW_KEY_INSERT,
+                    "key.categories." + ApertureAPI.MODID
+            ));
+
     private static Lazy<KeyMapping> register(KeyMapping key) {
         Lazy<KeyMapping> lazy = Lazy.of(() -> key);
         list.add(lazy);

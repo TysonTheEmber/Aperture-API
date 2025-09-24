@@ -32,6 +32,9 @@
   "key.apertureapi.native_center": "Native Center",
   "key.apertureapi.remove_native_center": "Remove Native Center",
 
+  "commands.apertureapi.play.description": "Play a camera path with optional speed and loop settings",
+  "commands.apertureapi.play.usage": "Usage: /camera play <name> [speed] [loop] [target]",
+  "commands.apertureapi.play.defaults": "Defaults: speed=1.0, loop=false",
   "commands.apertureapi.play.failure": "No such animation: ",
   "commands.apertureapi.play.native.failure": "Animation is not a native path: ",
 
@@ -249,6 +252,12 @@
   "commands.camera.test.tooltip": "Generate a demonstration path with CMDCam-style interpolation.",
   "commands.camera.debug": "Debug Path",
   "commands.camera.debug.tooltip": "Show detailed information about path evaluation at specific time.",
+  "commands.camera.play": "Play Camera Path",
+  "commands.camera.play.tooltip": "Play a camera path. Defaults: speed=1.0x (normal), loop=false (play once).",
+  "commands.camera.play.speed.tooltip": "Playback speed multiplier (0.05x to 10.0x). 1.0 = normal speed.",
+  "commands.camera.play.loop.tooltip": "Whether to loop the path continuously. Default: false (play once).",
+  "commands.camera.stop": "Stop Camera",
+  "commands.camera.stop.tooltip": "Stop the currently playing camera path with smooth fade-out.",
 
   "gui.path.timeline.title": "Camera Path Timeline",
   "gui.path.timeline.tooltip": "Visual timeline for keyframe editing and path preview.",

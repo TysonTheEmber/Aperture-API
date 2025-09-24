@@ -68,7 +68,7 @@ public class CameraCommand {
     private static int play(CommandContext<CommandSourceStack> ctx) {
         String name = StringArgumentType.getString(ctx, "name");
         float speed = ctx.getInput().contains(" ") && ctx.getInput().split(" ").length >= 4 ? FloatArgumentType.getFloat(ctx, "speed") : 1.0f;
-        boolean loop = ctx.getInput().contains(" ") && ctx.getInput().split(" ").length >= 5 ? com.mojang.brigadier.arguments.BoolArgumentType.getBool(ctx, "loop") : true;
+        boolean loop = ctx.getInput().contains(" ") && ctx.getInput().split(" ").length >= 5 ? com.mojang.brigadier.arguments.BoolArgumentType.getBool(ctx, "loop") : false;
         ServerPlayer player;
         try { player = ctx.getSource().getPlayerOrException(); } catch (Exception e) { CommandUtils.msgError(ctx.getSource(), "Player-only command"); return 0; }
         ServerLevel level = CommandUtils.level(ctx.getSource());

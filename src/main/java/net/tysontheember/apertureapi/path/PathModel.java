@@ -1,6 +1,7 @@
 package net.tysontheember.apertureapi.path;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.floats.FloatList;
@@ -444,31 +445,464 @@ public class PathModel {
      * Convert to JSON (v2 format)
      */
     public JsonObject toJson(Gson gson) {
-        // Implementation will be added in the next step
-        return new JsonObject();
+        JsonObject json = new JsonObject();
+        
+        // Header
+        json.addProperty("version", VERSION);
+        json.addProperty("id", id);
+        json.addProperty("name", name);
+        json.addProperty("loop", loop);
+        
+        // Defaults
+        JsonObject defaultsObj = new JsonObject();
+        defaultsObj.addProperty("interp", defaults.interpolationType.getName());
+        defaultsObj.addProperty("ease", defaults.easingType.getName());
+        defaultsObj.addProperty("speedMode", defaults.speedMode.name().toLowerCase());
+        defaultsObj.addProperty("banking", defaults.banking);
+        defaultsObj.addProperty("bankingStrength", defaults.bankingStrength);
+        defaultsObj.addProperty("rollMix", defaults.rollMix);
+        json.add("defaults", defaultsObj);
+        
+        // Speed settings
+        JsonObject speedObj = new JsonObject();
+        speedObj.addProperty("durationSec", speed.durationSec);
+        if (speed.blocksPerSec != null) {
+            speedObj.addProperty("blocksPerSec", speed.blocksPerSec);
+        }
+        json.add("speed", speedObj);
+        
+        // Segments
+        JsonArray segmentsArray = new JsonArray();
+        for (Segment segment : segments) {
+            segmentsArray.add(segmentToJson(segment));
+        }
+        json.add("segments", segmentsArray);
+        
+        // Metadata
+        json.addProperty("lastModified", lastModified);
+        json.addProperty("lastModifier", lastModifier.toString());
+        
+        return json;
+    }
+    
+    private JsonObject segmentToJson(Segment segment) {
+        JsonObject json = new JsonObject();
+        
+        // Position
+        JsonArray pos = new JsonArray();
+        pos.add(segment.position.x);
+        pos.add(segment.position.y);
+        pos.add(segment.position.z);
+        json.add("p", pos);
+        
+        // Orientation as quaternion and Euler
+        JsonObject rot = new JsonObject();
+        Vector3f euler = segment.toEulerDegrees();
+        rot.addProperty("yaw", euler.y);
+        rot.addProperty("pitch", euler.x);
+        rot.addProperty("roll", euler.z);
+        
+        // Also store quaternion for precision
+        JsonArray quat = new JsonArray();
+        quat.add(segment.orientation.x);
+        quat.add(segment.orientation.y);
+        quat.add(segment.orientation.z);
+        quat.add(segment.orientation.w);
+        rot.add("q", quat);
+        json.add("rot", rot);
+        
+        // Additional roll for banking
+        json.addProperty("roll", segment.roll);
+        json.addProperty("fov", segment.fov);
+        
+        // Timing
+        if (segment.durationSec != null) {
+            json.addProperty("durationSec", segment.durationSec);
+        }
+        if (segment.weight != null) {
+            json.addProperty("weight", segment.weight);
+        }
+        
+        // Per-segment overrides
+        if (segment.interpolationType != null) {
+            json.addProperty("interp", segment.interpolationType.getName());
+        }
+        if (segment.easingType != null) {
+            json.addProperty("ease", segment.easingType.getName());
+        }
+        
+        // Follow target
+        if (segment.followTarget != null) {
+            JsonObject followObj = new JsonObject();
+            followObj.addProperty("type", segment.followTarget.type.name().toLowerCase());
+            if (segment.followTarget.entityId != null) {
+                followObj.addProperty("id", segment.followTarget.entityId.toString());
+            }
+            if (segment.followTarget.position != null) {
+                JsonArray followPos = new JsonArray();
+                followPos.add(segment.followTarget.position.x);
+                followPos.add(segment.followTarget.position.y);
+                followPos.add(segment.followTarget.position.z);
+                followObj.add("pos", followPos);
+            }
+            followObj.addProperty("followSpeed", segment.followTarget.followSpeed);
+            json.add("lookAt", followObj);
+        }
+        
+        // TCB parameters
+        if (segment.tension != 0f || segment.continuity != 0f || segment.bias != 0f) {
+            JsonObject tcb = new JsonObject();
+            tcb.addProperty("t", segment.tension);
+            tcb.addProperty("c", segment.continuity);
+            tcb.addProperty("b", segment.bias);
+            json.add("tcb", tcb);
+        }
+        
+        // Bezier handles
+        if (segment.bezierIn != null || segment.bezierOut != null) {
+            JsonObject bezier = new JsonObject();
+            if (segment.bezierIn != null) {
+                JsonArray inArray = new JsonArray();
+                inArray.add(segment.bezierIn.x);
+                inArray.add(segment.bezierIn.y);
+                inArray.add(segment.bezierIn.z);
+                bezier.add("in", inArray);
+            }
+            if (segment.bezierOut != null) {
+                JsonArray outArray = new JsonArray();
+                outArray.add(segment.bezierOut.x);
+                outArray.add(segment.bezierOut.y);
+                outArray.add(segment.bezierOut.z);
+                bezier.add("out", outArray);
+            }
+            json.add("bezier", bezier);
+        }
+        
+        return json;
     }
     
     /**
      * Load from JSON
      */
     public static PathModel fromJson(JsonObject json, Gson gson) {
-        // Implementation will be added in the next step
-        return new PathModel("temp", "temp");
+        // Check version
+        int version = json.has("version") ? json.get("version").getAsInt() : 1;
+        
+        if (version == 1) {
+            // Migrate from v1
+            return migrateFromV1(json);
+        }
+        
+        // Parse v2
+        String id = json.get("id").getAsString();
+        String name = json.has("name") ? json.get("name").getAsString() : id;
+        
+        PathModel path = new PathModel(id, name);
+        
+        // Basic properties
+        if (json.has("loop")) {
+            path.setLoop(json.get("loop").getAsBoolean());
+        }
+        
+        // Defaults
+        if (json.has("defaults")) {
+            JsonObject defaults = json.getAsJsonObject("defaults");
+            if (defaults.has("interp")) {
+                path.defaults.interpolationType = InterpolationType.fromString(defaults.get("interp").getAsString());
+            }
+            if (defaults.has("ease")) {
+                path.defaults.easingType = EasingType.fromString(defaults.get("ease").getAsString());
+            }
+            if (defaults.has("speedMode")) {
+                String speedMode = defaults.get("speedMode").getAsString();
+                path.defaults.speedMode = speedMode.equals("speed") ? 
+                    PathDefaults.SpeedMode.SPEED : PathDefaults.SpeedMode.DURATION;
+            }
+            if (defaults.has("banking")) {
+                path.defaults.banking = defaults.get("banking").getAsBoolean();
+            }
+            if (defaults.has("bankingStrength")) {
+                path.defaults.bankingStrength = defaults.get("bankingStrength").getAsFloat();
+            }
+            if (defaults.has("rollMix")) {
+                path.defaults.rollMix = defaults.get("rollMix").getAsFloat();
+            }
+        }
+        
+        // Speed settings
+        if (json.has("speed")) {
+            JsonObject speed = json.getAsJsonObject("speed");
+            if (speed.has("durationSec")) {
+                path.speed.durationSec = speed.get("durationSec").getAsFloat();
+            }
+            if (speed.has("blocksPerSec")) {
+                path.speed.blocksPerSec = speed.get("blocksPerSec").getAsFloat();
+            }
+        }
+        
+        // Segments
+        if (json.has("segments")) {
+            JsonArray segments = json.getAsJsonArray("segments");
+            for (int i = 0; i < segments.size(); i++) {
+                Segment segment = segmentFromJson(segments.get(i).getAsJsonObject());
+                path.addSegment(segment);
+            }
+        }
+        
+        // Metadata
+        if (json.has("lastModified")) {
+            path.lastModified = json.get("lastModified").getAsLong();
+        }
+        if (json.has("lastModifier")) {
+            path.lastModifier = UUID.fromString(json.get("lastModifier").getAsString());
+        }
+        
+        return path;
+    }
+    
+    private static Segment segmentFromJson(JsonObject json) {
+        // Position
+        JsonArray posArray = json.getAsJsonArray("p");
+        Vector3f position = new Vector3f(
+            posArray.get(0).getAsFloat(),
+            posArray.get(1).getAsFloat(),
+            posArray.get(2).getAsFloat()
+        );
+        
+        // Orientation
+        Quaternionf orientation = new Quaternionf();
+        if (json.has("rot")) {
+            JsonObject rot = json.getAsJsonObject("rot");
+            if (rot.has("q")) {
+                // Use quaternion if available (more precise)
+                JsonArray quat = rot.getAsJsonArray("q");
+                orientation.set(
+                    quat.get(0).getAsFloat(),
+                    quat.get(1).getAsFloat(),
+                    quat.get(2).getAsFloat(),
+                    quat.get(3).getAsFloat()
+                );
+            } else {
+                // Convert from Euler angles
+                float yaw = rot.has("yaw") ? rot.get("yaw").getAsFloat() : 0f;
+                float pitch = rot.has("pitch") ? rot.get("pitch").getAsFloat() : 0f;
+                float roll = rot.has("roll") ? rot.get("roll").getAsFloat() : 0f;
+                
+                orientation.rotateYXZ(
+                    (float) Math.toRadians(yaw),
+                    (float) Math.toRadians(pitch),
+                    (float) Math.toRadians(roll)
+                );
+            }
+        }
+        
+        Segment segment = new Segment(position, orientation);
+        
+        // Additional roll for banking
+        if (json.has("roll")) {
+            segment.roll = json.get("roll").getAsFloat();
+        }
+        
+        // FOV
+        if (json.has("fov")) {
+            segment.fov = json.get("fov").getAsFloat();
+        }
+        
+        // Timing
+        if (json.has("durationSec")) {
+            segment.durationSec = json.get("durationSec").getAsFloat();
+        }
+        if (json.has("weight")) {
+            segment.weight = json.get("weight").getAsFloat();
+        }
+        
+        // Per-segment overrides
+        if (json.has("interp")) {
+            segment.interpolationType = InterpolationType.fromString(json.get("interp").getAsString());
+        }
+        if (json.has("ease")) {
+            segment.easingType = EasingType.fromString(json.get("ease").getAsString());
+        }
+        
+        // Follow target
+        if (json.has("lookAt")) {
+            JsonObject lookAt = json.getAsJsonObject("lookAt");
+            FollowTarget target = new FollowTarget();
+            
+            if (lookAt.has("type")) {
+                String type = lookAt.get("type").getAsString().toUpperCase();
+                target.type = FollowTarget.FollowType.valueOf(type);
+            }
+            if (lookAt.has("id")) {
+                target.entityId = UUID.fromString(lookAt.get("id").getAsString());
+            }
+            if (lookAt.has("pos")) {
+                JsonArray pos = lookAt.getAsJsonArray("pos");
+                target.position = new Vector3f(
+                    pos.get(0).getAsFloat(),
+                    pos.get(1).getAsFloat(),
+                    pos.get(2).getAsFloat()
+                );
+            }
+            if (lookAt.has("followSpeed")) {
+                target.followSpeed = lookAt.get("followSpeed").getAsFloat();
+            }
+            
+            segment.followTarget = target;
+        }
+        
+        // TCB parameters
+        if (json.has("tcb")) {
+            JsonObject tcb = json.getAsJsonObject("tcb");
+            if (tcb.has("t")) segment.tension = tcb.get("t").getAsFloat();
+            if (tcb.has("c")) segment.continuity = tcb.get("c").getAsFloat();
+            if (tcb.has("b")) segment.bias = tcb.get("b").getAsFloat();
+        }
+        
+        // Bezier handles
+        if (json.has("bezier")) {
+            JsonObject bezier = json.getAsJsonObject("bezier");
+            if (bezier.has("in")) {
+                JsonArray inArray = bezier.getAsJsonArray("in");
+                segment.bezierIn = new Vector3f(
+                    inArray.get(0).getAsFloat(),
+                    inArray.get(1).getAsFloat(),
+                    inArray.get(2).getAsFloat()
+                );
+            }
+            if (bezier.has("out")) {
+                JsonArray outArray = bezier.getAsJsonArray("out");
+                segment.bezierOut = new Vector3f(
+                    outArray.get(0).getAsFloat(),
+                    outArray.get(1).getAsFloat(),
+                    outArray.get(2).getAsFloat()
+                );
+            }
+        }
+        
+        return segment;
+    }
+    
+    /**
+     * Migrate from JSON v1 to PathModel v2
+     */
+    private static PathModel migrateFromV1(JsonObject json) {
+        String id = json.get("id").getAsString();
+        PathModel path = new PathModel(id, id);
+        
+        // Migrate basic properties
+        if (json.has("loop")) {
+            path.setLoop(json.get("loop").getAsBoolean());
+        }
+        
+        // Migrate speed (v1 used simple float)
+        if (json.has("speed")) {
+            float speed = json.get("speed").getAsFloat();
+            // Assume it's a duration multiplier, convert to actual duration
+            path.getSpeed().setDurationMode(10f / speed); // Base 10 second path
+        }
+        
+        // Migrate keyframes to segments
+        if (json.has("keyframes")) {
+            JsonArray keyframes = json.getAsJsonArray("keyframes");
+            for (int i = 0; i < keyframes.size(); i++) {
+                JsonObject kf = keyframes.get(i).getAsJsonObject();
+                
+                // Position
+                JsonObject pos = kf.getAsJsonObject("pos");
+                Vector3f position = new Vector3f(
+                    (float) pos.get("x").getAsDouble(),
+                    (float) pos.get("y").getAsDouble(),
+                    (float) pos.get("z").getAsDouble()
+                );
+                
+                // Orientation from Euler or lookAt
+                float yaw = 0f, pitch = 0f, roll = 0f;
+                if (kf.has("rot")) {
+                    JsonObject rot = kf.getAsJsonObject("rot");
+                    yaw = rot.has("yaw") ? rot.get("yaw").getAsFloat() : 0f;
+                    pitch = rot.has("pitch") ? rot.get("pitch").getAsFloat() : 0f;
+                    roll = rot.has("roll") ? rot.get("roll").getAsFloat() : 0f;
+                }
+                
+                Segment segment = new Segment(position, yaw, pitch, roll);
+                
+                // FOV
+                if (kf.has("fov")) {
+                    segment.fov = kf.get("fov").getAsFloat();
+                }
+                
+                // Handle lookAt by creating follow target
+                if (kf.has("lookAt")) {
+                    JsonObject lookAt = kf.getAsJsonObject("lookAt");
+                    FollowTarget target = new FollowTarget();
+                    target.type = FollowTarget.FollowType.BLOCK;
+                    target.position = new Vector3f(
+                        (float) lookAt.get("x").getAsDouble(),
+                        (float) lookAt.get("y").getAsDouble(),
+                        (float) lookAt.get("z").getAsDouble()
+                    );
+                    segment.followTarget = target;
+                }
+                
+                path.addSegment(segment);
+            }
+        }
+        
+        // Set reasonable defaults for migrated paths
+        path.getDefaults().interpolationType = InterpolationType.CATMULL_CENTRIPETAL;
+        path.getDefaults().easingType = EasingType.CUBIC_IN_OUT;
+        
+        return path;
     }
     
     /**
      * Convert to NBT
      */
     public CompoundTag toNBT() {
-        // Implementation will be added in the next step
-        return new CompoundTag();
+        CompoundTag nbt = new CompoundTag();
+        
+        nbt.putString("id", id);
+        nbt.putString("name", name);
+        nbt.putInt("version", version);
+        nbt.putBoolean("loop", loop);
+        
+        // Serialize as JSON string for now (NBT is mainly for save data)
+        nbt.putString("jsonData", toJson(new Gson()).toString());
+        
+        nbt.putLong("lastModified", lastModified);
+        nbt.putString("lastModifier", lastModifier.toString());
+        
+        return nbt;
     }
     
     /**
      * Load from NBT
      */
     public static PathModel fromNBT(CompoundTag nbt) {
-        // Implementation will be added in the next step
-        return new PathModel("temp", "temp");
+        if (nbt.contains("jsonData")) {
+            // Load from embedded JSON
+            String jsonData = nbt.getString("jsonData");
+            JsonObject json = new Gson().fromJson(jsonData, JsonObject.class);
+            return fromJson(json, new Gson());
+        }
+        
+        // Fallback for basic NBT-only data
+        String id = nbt.getString("id");
+        String name = nbt.contains("name") ? nbt.getString("name") : id;
+        PathModel path = new PathModel(id, name);
+        
+        if (nbt.contains("loop")) {
+            path.setLoop(nbt.getBoolean("loop"));
+        }
+        
+        if (nbt.contains("lastModified")) {
+            path.lastModified = nbt.getLong("lastModified");
+        }
+        if (nbt.contains("lastModifier")) {
+            path.lastModifier = UUID.fromString(nbt.getString("lastModifier"));
+        }
+        
+        return path;
     }
 }

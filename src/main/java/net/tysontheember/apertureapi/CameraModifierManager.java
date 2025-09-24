@@ -23,86 +23,86 @@ import java.util.Map;
 
 @Mod.EventBusSubscriber(modid = ApertureAPI.MODID, value = Dist.CLIENT)
 public class CameraModifierManager {
-    //缓存操作器
-    //高优先级
+    // Modifier caches
+    // High priority
     private static final HashMap<String, Modifier> modifiersH = new HashMap<>();
-    //低优先级
+    // Low priority
     private static final HashMap<String, Modifier> modifiersL = new HashMap<>();
-    //背景操作器
+    // Background modifiers (always accumulate)
     private static final HashMap<String, Modifier> modifiersB = new HashMap<>();
-    //正排序
+    // Positive order (H -> L)
     private static final HashMap<String, Modifier>[] positiveModifiers = new HashMap[]{modifiersH, modifiersL};
-    //负排序
+    // Negative order (L -> H)
     private static final HashMap<String, Modifier>[] negativeModifiers = new HashMap[]{modifiersL, modifiersH};
-    //玩家指定顺序
+    // Player-specified ordering
     private static final List<String> playerOrder = new ArrayList<>();
-    //玩家移除的背景操作器
+    // Background modifiers removed by player
     private static final List<String> playerRemovedBackground = new ArrayList<>();
 
-    //相机全局模式坐标
+    // Camera global-mode position
     private static final Vector3d globalPos = new Vector3d();
-    //上一次的相机全局模式坐标
+    // Previous global-mode position
     private static final Vector3d globalPosO = new Vector3d();
-    //相机局部模式坐标
+    // Camera local-mode position
     private static final Vector3d selfPos = new Vector3d();
-    //上一次的相机局部坐标
+    // Previous local-mode position
     private static final Vector3d selfPosO = new Vector3d();
 
-    //相机旋转
+    // Camera rotation (YXZ)
     private static final Vector3f rotation = new Vector3f();
-    //上一次的相机局部旋转
+    // Previous local rotation
     private static final Vector3f rotationO = new Vector3f();
 
-    //相机FOV
+    // Camera FOV
     private static double FOV;
-    //上一次的相机FOV
+    // Previous camera FOV
     private static double FOV_O;
 
-    //相机状态
+    // Camera state bitfield
     private static int STATE;
-    //上一次相机状态
+    // Previous camera state bitfield
     private static int STATE_O;
 
     private static final Vector3f ROT_RESULT = new Vector3f();
 
     public static void modify() {
         cleanCache();
-        //按照玩家指定顺序应用第一个可用操作器
+        // Apply the first effective modifier following player order (from end to start)
         applyPlayerOrderModifier();
 
         if (!isStateEnabledOr(ModifierStates.ENABLE)) {
-            //按照优先级应用第一个可用操作器
+            // Apply the first effective modifier by priority (H->L)
             applyEffectiveModifierFromPositive();
         }
 
-        //应用背景操作器
+        // Apply background modifiers (accumulated)
         applyBackgroundModifier();
 
         if (!isStateEnabledOr(ModifierStates.ENABLE)) {
             cleanCache();
-            //记录上一次的相机局部坐标、旋转、FOV
+            // Store last local position/rotation/FOV
             saveToOld();
-            //无任何修改，直接结束
+            // No modifications active — exit
             return;
         }
 
         float partialTick = getPartialTickTime();
         Entity entity = camera().getEntity();
 
-        //这里到底是取头部还是身体的旋转？
+        // Should we take head or body rotation here? Using entity.getYRot() (% 360).
         float yRot = entity.getYRot() % 360;
 
-        //操作坐标
+        // Apply position modification
         applyModifyToPos(partialTick, yRot, entity);
 
-        //操作旋转
+        // Apply rotation modification
         applyModifyToRot(partialTick, yRot);
 
         saveToOld();
     }
 
     private static void applyPlayerOrderModifier() {
-        //优先从玩家指定排序获取
+        // Prefer player-specified ordering first
         for (int i = playerOrder.size() - 1; i >= 0; i--) {
             String id = playerOrder.get(i);
             Modifier modifier = findModifierFromNegativeById(id);
@@ -111,7 +111,7 @@ public class CameraModifierManager {
                 continue;
             }
 
-            //没有启用任何修改则跳过
+            // Skip if no position/rotation/FOV flags are enabled
             if (!modifier.isStateEnabledOr(ModifierStates.POS_ENABLED | ModifierStates.ROT_ENABLED | ModifierStates.FOV_ENABLED)) {
                 continue;
             }
@@ -163,14 +163,14 @@ public class CameraModifierManager {
     }
 
     private static void applyBackgroundModifier() {
-        //背景修改器会全部相加并应用
-        //将玩家移除的背景操作器设为未修改
+        // Background modifiers are all summed and applied
+        // Mark player-removed background modifiers as ineffective
         for (int i = playerRemovedBackground.size() - 1; i >= 0; i--) {
             String modId = playerRemovedBackground.get(i);
             Modifier modifier = modifiersB.get(modId);
 
             if (modifier == null) {
-                //不存在这个操作器？移除它
+                // Modifier no longer exists — remove it from the list
                 playerRemovedBackground.remove(i);
                 continue;
             }
@@ -628,10 +628,10 @@ public class CameraModifierManager {
         double fov;
 
         if (isOldStateEnabledAnd(ModifierStates.ENABLE | ModifierStates.FOV_ENABLED | ModifierStates.LERP)) {
-            //上次有FOV修改，需插值
+            // Interpolate from previous FOV to current FOV
             fov = Mth.lerp(event.getPartialTick(), FOV_O, FOV);
         } else {
-            //无需插值，直接应用
+            // No interpolation needed — apply directly
             fov = FOV;
         }
 
@@ -650,7 +650,7 @@ public class CameraModifierManager {
 
     @SubscribeEvent
     public static void modifyFirstPersonHand(RenderHandEvent event) {
-        //全局模式下不能固定手臂
+        // In global mode the first-person arm cannot be fixed
         if (!isStateEnabledAnd(ModifierStates.ENABLE | ModifierStates.FIRST_PERSON_ARM_FIXED) || isStateEnabledOr(ModifierStates.GLOBAL_MODE_ENABLED)) {
             return;
         }
@@ -663,7 +663,7 @@ public class CameraModifierManager {
         float partialTick = event.getPartialTick();
         LocalPlayer player = Minecraft.getInstance().player;
 
-        //旋转
+        // Rotation
         if (isStateEnabledOr(ModifierStates.ROT_ENABLED)) {
             poseStack.mulPose(new Quaternionf().rotateZ(rotation.z * Mth.DEG_TO_RAD)
                     .rotateX(rotation.x * Mth.DEG_TO_RAD)
@@ -671,7 +671,7 @@ public class CameraModifierManager {
                     .rotateX(-player.getXRot() * Mth.DEG_TO_RAD));
         }
 
-        //坐标
+        // Position
         if (isStateEnabledOr(ModifierStates.POS_ENABLED)) {
             Vector3d pos;
             //局部模式

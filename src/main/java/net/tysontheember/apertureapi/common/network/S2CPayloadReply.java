@@ -75,6 +75,11 @@ public record S2CPayloadReply(CompoundTag tag) {
             ClientPayloadManager.INSTANCE.getNativePath(path, entity, succeed, context);
             return null;
         });
+        HANDLERS.put("playJsonPath", (tag, context) -> {
+            String id = tag.getString("id");
+            net.tysontheember.apertureapi.client.preview.JsonCameraPreview.start(id);
+            return null;
+        });
     }
 
     public static void encode(S2CPayloadReply pag, FriendlyByteBuf buf) {

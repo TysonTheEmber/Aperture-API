@@ -24,7 +24,7 @@ public class CameraAnimIdeCache {
     private static final Vector3f NATIVE_ROT = new Vector3f();
 
     /*static {
-        // 测试数据
+        // Test data (disabled)
         TRACK = new GlobalCameraPath("test");
         TRACK.add(new CameraKeyframe(new Vector3f(1, 56, 3), new Vector3f(), 70, PathInterpolator.LINEAR));
         TRACK.add(new CameraKeyframe(new Vector3f(3, 56, 5), new Vector3f(), 70, PathInterpolator.LINEAR));
@@ -57,7 +57,7 @@ public class CameraAnimIdeCache {
         b4.getPosBezier().easyInOut();
     }*/
 
-    // 每一帧的更新
+    // Per-tick update
     public static void tick() {
         if (MODE == Mode.MOVE || MODE == Mode.ROTATE) {
             MOVE_DATA.move();
@@ -103,7 +103,7 @@ public class CameraAnimIdeCache {
         if (selectedTime <= 0) {
             return length;
         }
-        // 检查是否为贝塞尔曲线控制点
+        // Check if we are hitting a Bezier control point
         CameraKeyframe point = PATH.getPoint(selectedTime);
 
         if (point == null || point.getPathInterpolator() != PathInterpolator.BEZIER) {
@@ -495,9 +495,10 @@ public class CameraAnimIdeCache {
             float yRot = playerYHeadRot();
             float xRot = playerXRot();
 
-            /// 解释下移动的算法
-            /// 从视线处发出射线，并与对应平面相交，得到交点
-            /// 根据交点的坐标与delta相加，得到目标坐标
+            /// Movement algorithm overview:
+            /// - Cast a ray from the camera view
+            /// - Intersect with the corresponding constraint plane(s) for the selected axis/plane
+            /// - Use the intersection point plus the cached delta to compute the new target position
             switch (moveType) {
                 case X -> {
                     float a = Intersectionf.intersectRayPlane(

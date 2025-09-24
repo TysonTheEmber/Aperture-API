@@ -47,20 +47,17 @@ public interface ICameraModifier {
     double getFov();
 
     /**
-     * Enable modifier.<br/>
-     * 启用操作器。
+     * Enable this modifier.
      */
     ICameraModifier enable();
 
     /**
-     * Disable modifier.<br/>
-     * 关闭操作器。
+     * Disable this modifier.
      */
     ICameraModifier disable();
 
     /**
-     * Disable all state.<br/>
-     * 关闭所有状态。
+     * Disable all modifier flags (position, rotation, fov, etc.).
      */
     ICameraModifier disableAll();
 
@@ -77,28 +74,24 @@ public interface ICameraModifier {
     ICameraModifier disableLerp();
 
     /**
-     * Disable all state. Set pos, rotation, fov to zero.<br/>
-     * 关闭所有状态。将位置，旋转，FOV设置为零。
+     * Reset this modifier: disable all flags and zero out pos, rotation and fov.
      */
     ICameraModifier reset();
 
     /**
-     * Set modifier state by integer. For example:<br/>
-     * 通过整数来设置状态。例如：
+     * Set modifier state using bit flags. For example:
      * <pre>
      *     modifier.setState(ModifierStates.ENABLE | ModifierStates.POS_ENABLED);
      * </pre>
-     * This is the same as:<br/>
-     * 等效于：
+     * is equivalent to:
      * <pre>
-     *     modifier.enable().enablePos()
+     *     modifier.enable().enablePos();
      * </pre>
      */
     ICameraModifier setState(int state);
 
     /**
-     * @param dest state save into int[0]. 状态会保存到int[0]中。
-     *
+     * Copy the current bitfield state into dest[0].
      */
     ICameraModifier getState(int[] dest);
 

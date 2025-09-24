@@ -39,7 +39,7 @@ public class MouseInput {
         if (!CameraAnimIdeCache.EDIT) {
             return;
         }
-        // 编辑模式下，阻断鼠标点击事件
+        // In edit mode, consume the mouse click so the game doesn't handle it
         event.setCanceled(true);
         CameraAnimIdeCache.leftPick(playerEyePos(), playerView(), 6);
     }

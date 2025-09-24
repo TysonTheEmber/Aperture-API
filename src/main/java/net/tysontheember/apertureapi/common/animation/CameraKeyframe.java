@@ -6,7 +6,7 @@ import net.minecraft.nbt.ListTag;
 import org.joml.Vector2f;
 import org.joml.Vector3f;
 
-/// 相机点位
+/// Camera keyframe data (position/rotation/FOV and interpolation)
 public class CameraKeyframe {
     public static final CameraKeyframe NULL = new CameraKeyframe(new Vector3f(Float.MIN_VALUE), new Vector3f(), 0, PathInterpolator.STEP);
     private final Vector3f pos;

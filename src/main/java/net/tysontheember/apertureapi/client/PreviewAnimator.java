@@ -19,8 +19,9 @@ public class PreviewAnimator {
             return;
         }
 
-        if (time > CameraAnimIdeCache.getPath().getLength()) {
-            reset();
+        if (time >= CameraAnimIdeCache.getPath().getLength()) {
+            // Wrap seamlessly to the beginning to avoid a one-frame stall at the end
+            time = 0;
         } else {
             time++;
         }
@@ -70,32 +71,44 @@ public class PreviewAnimator {
     public boolean prepareCameraInfo(Vector3f posDest, Vector3f rotDest, float[] fov) {
         float partialTicks = isPlaying() ? partialTicks() : 0;
         GlobalCameraPath track = CameraAnimIdeCache.getPath();
-        Map.Entry<Integer, CameraKeyframe> current = track.getEntry(time);
-
-        Map.Entry<Integer, CameraKeyframe> preEntry = current == null ? track.getPreEntry(time) : current;
+        float currentTime = time + partialTicks;
+        
+        // Use consistent logic: always find the keyframe segment we're in
+        Map.Entry<Integer, CameraKeyframe> preEntry = track.getPreEntry(time + 1); // +1 to handle exact matches correctly
         Map.Entry<Integer, CameraKeyframe> nextEntry = track.getNextEntry(time);
-        float t;
-
+        
+        // If we're before the first keyframe or after the last
         if (preEntry == null) {
             if (nextEntry == null) return false;
             posDest.set(nextEntry.getValue().getPos());
             rotDest.set(nextEntry.getValue().getRot());
+            fov[0] = nextEntry.getValue().getFov();
             return true;
+        }
+        
+        if (nextEntry == null) {
+            posDest.set(preEntry.getValue().getPos());
+            rotDest.set(preEntry.getValue().getRot());
+            fov[0] = preEntry.getValue().getFov();
+            return true;
+        }
+        
+        // Calculate interpolation parameter with proper boundary handling
+        float timeDelta = nextEntry.getKey() - preEntry.getKey();
+        float t;
+        
+        if (timeDelta <= 0.001f) {
+            // Handle very close or identical keyframe times
+            t = 0.0f;
         } else {
-            if (nextEntry == null) {
-                posDest.set(preEntry.getValue().getPos());
-                rotDest.set(preEntry.getValue().getRot());
-                return true;
-            } else {
-                t = (partialTicks + time - preEntry.getKey()) / (nextEntry.getKey() - preEntry.getKey());
-            }
+            t = net.tysontheember.apertureapi.common.animation.JitterPrevention.calculateSmoothT(currentTime, preEntry.getKey(), nextEntry.getKey());
         }
 
         CameraKeyframe pre = preEntry.getValue();
         CameraKeyframe next = nextEntry.getValue();
 
         float t1;
-        // 坐标插值
+        // Position interpolation
         if (next.getPosTimeInterpolator() == TimeInterpolator.BEZIER) {
             t1 = next.getPosBezier().interpolate(t);
         } else {
@@ -128,8 +141,8 @@ public class PreviewAnimator {
             case STEP -> posDest.set(pre.getPos());
         }
 
-        // 旋转插值
-        if (next.getPosTimeInterpolator() == TimeInterpolator.BEZIER) {
+        // Rotation interpolation
+        if (next.getRotTimeInterpolator() == TimeInterpolator.BEZIER) {
             t1 = next.getRotBezier().interpolate(t);
         } else {
             t1 = t;
@@ -137,16 +150,17 @@ public class PreviewAnimator {
 
         Vector3f preRot = pre.getRot();
         Vector3f nextRot = next.getRot();
-        line(t1, preRot, nextRot, rotDest);
+        // Use smooth rotation interpolation to prevent angle wrapping issues
+        net.tysontheember.apertureapi.common.animation.JitterPrevention.smoothRotationLerp(t1, preRot, nextRot, rotDest);
 
-        // fov插值
-        if (next.getPosTimeInterpolator() == TimeInterpolator.BEZIER) {
-            t1 = next.getRotBezier().interpolate(t);
+        // FOV interpolation
+        if (next.getFovTimeInterpolator() == TimeInterpolator.BEZIER) {
+            t1 = next.getFovBezier().interpolate(t);
         } else {
             t1 = t;
         }
 
-        fov[0] = Mth.lerp(t1, pre.getFov(), next.getFov());
+        fov[0] = net.tysontheember.apertureapi.common.animation.JitterPrevention.smoothFovLerp(t1, pre.getFov(), next.getFov());
 
         return true;
     }

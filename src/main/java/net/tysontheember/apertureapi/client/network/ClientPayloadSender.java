@@ -36,5 +36,10 @@ public class ClientPayloadSender {
         root.put("value", value);
         ModNetwork.INSTANCE.sendToServer(new C2SPayloadManager(root));
     }
+    public static void cutsceneInvul(boolean playing) {
+        CompoundTag tag = new CompoundTag();
+        tag.putBoolean("playing", playing);
+        send("cutsceneInvul", tag);
+    }
 }
 

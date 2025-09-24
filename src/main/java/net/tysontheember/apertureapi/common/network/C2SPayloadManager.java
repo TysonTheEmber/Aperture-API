@@ -18,6 +18,7 @@ public record C2SPayloadManager(CompoundTag tag) {
         HANDLERS.put("putGlobalPath", (tag, context) -> ServerPayloadManager.INSTANCE.putGlobalPath(GlobalCameraPath.fromNBT(tag), context));
         HANDLERS.put("removeGlobalPath", (tag, context) -> ServerPayloadManager.INSTANCE.removeGlobalPath(tag.getString("id"), context));
         HANDLERS.put("getGlobalPath", (tag, context) -> ServerPayloadManager.INSTANCE.getGlobalPath(tag.getString("id"), tag.getInt("receiver"), context));
+        HANDLERS.put("cutsceneInvul", (tag, context) -> net.tysontheember.apertureapi.common.security.DamageGuard.INSTANCE.onClientCutsceneState(context.getSender(), tag.getBoolean("playing")));
     }
 
     public static void encode(C2SPayloadManager pag, FriendlyByteBuf buf) {

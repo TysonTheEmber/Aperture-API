@@ -9,8 +9,9 @@ public class ApertureAPI {
     public static final String MODID = "apertureapi";
 
     public ApertureAPI() {
-        // Register client config spec and initialize network
+        // Register configs and initialize network
         ModLoadingContext.get().registerConfig(ModConfig.Type.CLIENT, ModConf.SPEC);
+        ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, CommonConf.SPEC);
         net.tysontheember.apertureapi.common.ModNetwork.init();
     }
 }

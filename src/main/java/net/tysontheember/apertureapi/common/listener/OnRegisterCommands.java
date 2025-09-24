@@ -29,6 +29,7 @@ private static final Component PLAY_ANIM_FAILURE = Component.translatable("comma
     @SubscribeEvent
     public static void register(RegisterCommandsEvent event) {
         CommandDispatcher<CommandSourceStack> dispatcher = event.getDispatcher();
+        // Existing cameraanim commands
         dispatcher.register(
                 Commands.literal("cameraanim")
                         .then(Commands.literal("play")
@@ -101,6 +102,11 @@ private static final Component PLAY_ANIM_FAILURE = Component.translatable("comma
                         )
 
         );
+        
+        // Register smoothing/debug commands and path export under '/aperture ...' with '/camera' alias
+        net.tysontheember.apertureapi.common.command.SmoothingCommand.register(dispatcher);
+        net.tysontheember.apertureapi.common.command.PathExportCommand.register(dispatcher);
+        net.tysontheember.apertureapi.common.command.DemoCameraCommand.register(dispatcher);
     }
 }
 

@@ -73,8 +73,26 @@ public class ClientPayloadManager {
             }
             case 1 -> {
                 if (succeed && path != null) {
-                    Animator.INSTANCE.setPathAndPlay(path);
-                    ClientUtil.toThirdView();
+                    final GlobalCameraPath pth = path;
+                    // Gate start until screen is fully black
+                    net.tysontheember.apertureapi.client.gui.overlay.CutsceneFadeOverlay.startEnterSequence(() -> {
+                        Animator.INSTANCE.setLoop(true).setPathAndPlay(pth);
+                        // Notify server we are in a cutscene now
+                        ClientPayloadSender.cutsceneInvul(true);
+                        ClientUtil.toThirdView();
+                    });
+                }
+            }
+            case 2 -> {
+                if (succeed && path != null) {
+                    final GlobalCameraPath pth = path;
+                    // Gate start until screen is fully black
+                    net.tysontheember.apertureapi.client.gui.overlay.CutsceneFadeOverlay.startEnterSequence(() -> {
+                        Animator.INSTANCE.setLoop(false).setPathAndPlay(pth);
+                        // Notify server we are in a cutscene now
+                        ClientPayloadSender.cutsceneInvul(true);
+                        ClientUtil.toThirdView();
+                    });
                 }
             }
         }
@@ -82,8 +100,13 @@ public class ClientPayloadManager {
 
     public void getNativePath(@Nullable GlobalCameraPath path, @Nullable Entity entity, boolean succeed, NetworkEvent.Context context) {
         if (succeed && path != null && entity != null) {
-            Animator.INSTANCE.setPathAndPlay(path, entity.position().toVector3f(), new Vector3f(0, entity.getYRot(), 0));
-            ClientUtil.toThirdView();
+            final GlobalCameraPath pth = path;
+            final Entity ent = entity;
+            // Gate start until screen is fully black
+            net.tysontheember.apertureapi.client.gui.overlay.CutsceneFadeOverlay.startEnterSequence(() -> {
+                Animator.INSTANCE.setPathAndPlay(pth, ent.position().toVector3f(), new Vector3f(0, ent.getYRot(), 0));
+                ClientUtil.toThirdView();
+            });
         }
     }
 }

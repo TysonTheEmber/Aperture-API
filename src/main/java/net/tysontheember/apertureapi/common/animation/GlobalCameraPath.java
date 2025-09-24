@@ -15,7 +15,7 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.UUID;
 
-/// 全局相机轨迹
+/// Global camera path (timeline of keyframes)
 public class GlobalCameraPath {
     private final TreeMap<Integer, CameraKeyframe> keyframes;
     private final Int2ObjectOpenHashMap<CameraKeyframe> keyframeMapCache;
@@ -63,13 +63,21 @@ public class GlobalCameraPath {
         this.nativeMode = nativeMode;
     }
 
-    /// 把点加入到指定时间
-    ///
-    /// 相同时间点进行覆盖
+/// Add a keyframe at a specific time
+///
+    /// Overwrites any existing keyframe at the same time index
     public void add(int time, CameraKeyframe point) {
+        // Handle empty map safely (TreeMap.lastKey() throws when empty)
+        if (keyframes.isEmpty()) {
+            keyframes.put(time, point);
+            keyframeMapCache.put(time, point);
+            keyframeListCache.add(point);
+            return;
+        }
+
         Integer i = keyframes.lastKey();
 
-        if (i != null && i < time) {
+        if (i < time) {
             keyframeListCache.add(point);
         } else {
             dirty = true;
@@ -113,7 +121,7 @@ public class GlobalCameraPath {
         dirty = false;
     }
 
-    /// 更新控制点
+/// Update Bezier control handles for a keyframe and its neighbor
     public void updateBezier(int time) {
         if (!keyframeMapCache.containsKey(time)) {
             return;
@@ -345,6 +353,43 @@ public class GlobalCameraPath {
         UUID lastModifier = root.getUUID("lastModifier");
         boolean nativeMode = root.getBoolean("native");
         return new GlobalCameraPath(map, id, version, lastModifier, nativeMode);
+    }
+
+    /**
+     * Auto-smooth this camera path to eliminate keyframe jumps.
+     * This is a convenience method that applies SmoothingUtils.autoSmoothPath().
+     */
+    public void autoSmooth() {
+        SmoothingUtils.autoSmoothPath(this);
+    }
+
+    /**
+     * Detect potential keyframe jumps in this camera path.
+     * @return Array of time indices where jumps are detected
+     */
+    public int[] detectJumps() {
+        return SmoothingUtils.detectKeyframeJumps(this);
+    }
+
+    /**
+     * Fix detected keyframe jumps in this camera path.
+     * @param jumpTimes Array of time indices with jumps to fix
+     */
+    public void fixJumps(int[] jumpTimes) {
+        SmoothingUtils.fixDetectedJumps(this, jumpTimes);
+    }
+
+    /**
+     * Auto-detect and fix all keyframe jumps in this camera path.
+     * This is a one-call solution for smoothing out camera transitions.
+     */
+    public void autoSmoothAndFixJumps() {
+        int[] jumps = detectJumps();
+        if (jumps.length > 0) {
+            fixJumps(jumps);
+        }
+        // Apply overall smoothing for extra polish
+        autoSmooth();
     }
 }
 

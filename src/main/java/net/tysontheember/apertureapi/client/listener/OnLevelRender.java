@@ -89,16 +89,16 @@ public class OnLevelRender {
         MultiBufferSource.BufferSource bufferSource = Minecraft.getInstance().renderBuffers().bufferSource();
         RenderSystem.enableDepthTest();
 
-        // 获取相机位置
+        // Get current camera position
         Vec3 p = event.getCamera().getPosition();
         CAMERA_CACHE.set(p.x, p.y, p.z);
         SelectedPoint selected = getSelectedPoint();
 
-        // 线条
+        // Lines pass
         renderLines(selected, bufferSource, last);
-        // 连续三角面
+        // Filled triangles pass
         renderFilledBox(selected, bufferSource, last);
-        // 面片
+        // Quads pass
         renderQuads(selected, bufferSource, last);
         RenderSystem.disableDepthTest();
     }
@@ -163,15 +163,15 @@ private static final ICameraModifier PLAYER_MODIFIER = CameraModifierManager
 
     private static void renderLines(SelectedPoint selected, MultiBufferSource.BufferSource bufferSource, PoseStack.Pose pose) {
         VertexConsumer buffer = bufferSource.getBuffer(RenderType.LINES);
-        // 轨迹
+        // Path polyline
         renderTrackLine(selected, buffer, pose);
-        // 贝塞尔曲线控制点连接线
+        // Bezier control link lines
         renderBezierLine(selected, buffer, pose);
 
         switch (getMode()) {
-            case MOVE -> // 移动线
+            case MOVE -> // Move axis lines
                     renderMoveLine(selected, buffer, pose);
-            case ROTATE -> // 旋转环
+            case ROTATE -> // Rotation rings
                     renderRotateGizmo(selected, buffer, pose);
         }
 
@@ -240,7 +240,7 @@ private static final ICameraModifier PLAYER_MODIFIER = CameraModifierManager
         }
     }
 
-    // 使用vCache1、vCache2、vCache3、vCache4
+    // Uses V_CACHE_1, V_CACHE_2, V_CACHE_3, V_CACHE_4
     private static void renderTrackLine(SelectedPoint selected, VertexConsumer buffer, PoseStack.Pose last) {
         GlobalCameraPath track = getPath();
         ArrayList<CameraKeyframe> points = track.getPoints();
@@ -286,7 +286,7 @@ private static final ICameraModifier PLAYER_MODIFIER = CameraModifierManager
         }
     }
 
-    // 使用vCache1、vCache2
+    // Uses V_CACHE_1 and V_CACHE_2
     private static void renderMoveLine(SelectedPoint selected, VertexConsumer buffer, PoseStack.Pose last) {
         int selectedTime = selected.getPointTime();
 
@@ -294,7 +294,7 @@ private static final ICameraModifier PLAYER_MODIFIER = CameraModifierManager
             return;
         }
 
-        // 选中后显示移动用箭头的线
+        // When a point is selected, draw the move-axis helper lines
         Vector3f p = selected.getPosition();
 
         if (p == null) return;
@@ -334,7 +334,7 @@ private static final ICameraModifier PLAYER_MODIFIER = CameraModifierManager
             return;
         }
 
-        //渲染被选中点的额外线条（贝塞尔控制点连接线）
+        // Render extra lines for the selected point (Bezier control links)
         CameraKeyframe selectedPoint = track.getPoint(selectedTime);
 
         if (selectedPoint == null || selectedPoint.getPathInterpolator() != PathInterpolator.BEZIER) {
@@ -356,22 +356,22 @@ private static final ICameraModifier PLAYER_MODIFIER = CameraModifierManager
 
     private static void renderFilledBox(SelectedPoint selected, MultiBufferSource.BufferSource bufferSource, PoseStack.Pose last) {
         VertexConsumer buffer = bufferSource.getBuffer(RenderType.debugFilledBox());
-        // 相机点
+        // Camera keyframe points
         renderPoint(buffer, last);
-        // 贝塞尔控制点
+        // Bezier control points
         renderBezierPoint(selected, buffer, last);
-        // 选中点
+        // Selected keyframe
         renderSelectedPoint(selected, buffer, last);
 
         switch (getMode()) {
-            case MOVE -> // 移动箭头
+            case MOVE -> // Move arrowheads
                     renderArrowhead(selected, buffer, last);
         }
 
         bufferSource.endBatch(RenderType.debugFilledBox());
     }
 
-    // 使用vCache1
+    // Uses V_CACHE_1
     private static void renderPoint(VertexConsumer buffer, PoseStack.Pose last) {
         GlobalCameraPath track = getPath();
 
@@ -380,7 +380,7 @@ private static final ICameraModifier PLAYER_MODIFIER = CameraModifierManager
         }
     }
 
-    // 使用vCache1
+    // Uses V_CACHE_1
     private static void renderBezierPoint(SelectedPoint selected, VertexConsumer buffer, PoseStack.Pose last) {
         int selectedTime = selected.getPointTime();
 
@@ -395,7 +395,7 @@ private static final ICameraModifier PLAYER_MODIFIER = CameraModifierManager
 
         if (prePoint == null) return;
 
-        // 显示贝塞尔控制点
+        // Draw Bezier control handle markers
         Vec3BezierController controller = selectedPoint.getPathBezier();
         addPoint(buffer, last, V_CACHE_1.set(controller.getLeft()).sub(CAMERA_CACHE), 0.05f, 0x7f98FB98);
         addPoint(buffer, last, V_CACHE_1.set(controller.getRight()).sub(CAMERA_CACHE), 0.05f, 0x7f98FB98);
@@ -415,7 +415,7 @@ private static final ICameraModifier PLAYER_MODIFIER = CameraModifierManager
         }
     }
 
-    // 使用vCache1
+    // Uses V_CACHE_1
     private static void renderArrowhead(SelectedPoint selected, VertexConsumer buffer, PoseStack.Pose last) {
         Vector3f pos = selected.getPosition();
 
@@ -443,16 +443,16 @@ private static final ICameraModifier PLAYER_MODIFIER = CameraModifierManager
         switch (getMode()) {
             case NONE -> {
             }
-            case MOVE -> // 移动半透明片
+            case MOVE -> // Translucent move planes
                     renderMoveSlice(selected, buffer, last);
-            case ROTATE -> // 旋转厚环
+            case ROTATE -> // Thick rotation band
                     renderRotateBand(selected, buffer, last);
         }
 
         bufferSource.endBatch(RenderType.debugQuads());
     }
 
-    // 使用vCache1
+    // Uses V_CACHE_1
     private static void renderMoveSlice(SelectedPoint selected, VertexConsumer buffer, PoseStack.Pose last) {
         Vector3f pos = selected.getPosition();
 
@@ -463,7 +463,7 @@ private static final ICameraModifier PLAYER_MODIFIER = CameraModifierManager
                 yzColor = X_COLOR_TRANSPARENT,
                 xzColor = Y_COLOR_TRANSPARENT;
 
-        // 保持轴向默认颜色（不改为蓝色）
+        // Keep default axis colors (do not switch to blue)
         switch (getMoveMode().getMoveType()) {
             case XY -> { /* keep xyColor as Z_COLOR_TRANSPARENT */ }
             case YZ -> { /* keep yzColor as X_COLOR_TRANSPARENT */ }
@@ -473,7 +473,7 @@ private static final ICameraModifier PLAYER_MODIFIER = CameraModifierManager
         addSlice(buffer, last, pos, xyColor, yzColor, xzColor);
     }
 
-    // 使用vCache5
+    // Uses V_CACHE_5
     private static void addLine(VertexConsumer buffer, PoseStack.Pose pose, Vector3f pos1, Vector3f pos2, int color) {
         Vector3f normalize = V_CACHE_5.set(pos2).sub(pos1).normalize();
         Matrix3f matrix3f = pose.normal();
@@ -482,7 +482,7 @@ private static final ICameraModifier PLAYER_MODIFIER = CameraModifierManager
         buffer.vertex(matrix4f, pos2.x, pos2.y, pos2.z).color(color).normal(matrix3f, normalize.x, normalize.y, normalize.z).endVertex();
     }
 
-    // 使用vCache6、vCache7
+    // Uses V_CACHE_6 and V_CACHE_7
     private static void addSmoothLine(VertexConsumer buffer, PoseStack.Pose pose, Vector3f pre, Vector3f p1, Vector3f p2, Vector3f after, int color) {
         Vector3f pos1 = V_CACHE_6.set(p1);
         Vector3f pos2 = V_CACHE_7.zero();
@@ -497,7 +497,7 @@ private static final ICameraModifier PLAYER_MODIFIER = CameraModifierManager
         addLine(buffer, pose, pos2, p2, color);
     }
 
-    // 使用vCache6、vCache7
+    // Uses V_CACHE_6 and V_CACHE_7
     private static void addBezierLine(VertexConsumer buffer, PoseStack.Pose pose, Vector3f p1, Vector3f c1, Vector3f c2, Vector3f p2, int color) {
         Vector3f pos1 = V_CACHE_6.set(p1);
         Vector3f pos2 = V_CACHE_7.zero();
@@ -512,7 +512,7 @@ private static final ICameraModifier PLAYER_MODIFIER = CameraModifierManager
         addLine(buffer, pose, pos2, p2, color);
     }
 
-    // 使用vCache5
+    // Uses V_CACHE_5
     private static void addPoint(VertexConsumer buffer, PoseStack.Pose pose, Vector3f pos, float size, int color) {
         Vector3f vec = V_CACHE_5;
         Matrix4f matrix4f = pose.pose();
@@ -555,7 +555,7 @@ private static final ICameraModifier PLAYER_MODIFIER = CameraModifierManager
         buffer.vertex(matrix4f, vec.x, vec.y, vec.z).color(color).endVertex();//16
     }
 
-    // 使用vCache5
+    // Uses V_CACHE_5
     private static void addSlice(VertexConsumer buffer, PoseStack.Pose pose, Vector3f pos, int xyColor, int yzColor, int xzColor) {
         float spacing = 0.2f;
         float half = 0.3f + spacing;

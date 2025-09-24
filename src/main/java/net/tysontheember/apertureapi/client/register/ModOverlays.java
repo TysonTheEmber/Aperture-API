@@ -2,6 +2,7 @@ package net.tysontheember.apertureapi.client.register;
 
 import net.tysontheember.apertureapi.ApertureAPI;
 import net.tysontheember.apertureapi.client.gui.overlay.ModifyModeOverlay;
+import net.tysontheember.apertureapi.client.gui.overlay.CutsceneFadeOverlay;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.RegisterGuiOverlaysEvent;
 import net.minecraftforge.client.gui.overlay.VanillaGuiOverlay;
@@ -13,6 +14,7 @@ public class ModOverlays {
     @SubscribeEvent
     public static void register(RegisterGuiOverlaysEvent event) {
         event.registerBelow(VanillaGuiOverlay.HOTBAR.id(), "modify_mode_overlay", new ModifyModeOverlay());
+        event.registerAboveAll("cutscene_fade_overlay", new CutsceneFadeOverlay());
     }
 }
 

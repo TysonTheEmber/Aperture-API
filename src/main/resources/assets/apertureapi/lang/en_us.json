@@ -273,6 +273,8 @@
   "gui.path.preview.pause.tooltip": "Pause path preview animation.",
   "gui.path.preview.stop": "Stop Preview",
   "gui.path.preview.stop.tooltip": "Stop preview and return to start position.",
+  "gui.path.preview.loop": "Loop Preview",
+  "gui.path.preview.loop.tooltip": "Enable/disable preview looping. Default: false (play once).",
   "gui.path.loop.enabled": "Loop Enabled",
   "gui.path.loop.enabled.tooltip": "Path will seamlessly loop from end back to start.",
   "gui.path.outside_mode": "Outside Mode",

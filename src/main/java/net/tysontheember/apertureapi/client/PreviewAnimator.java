@@ -12,6 +12,7 @@ import static net.tysontheember.apertureapi.InterpolationMath.*;
 public class PreviewAnimator {
     public static final PreviewAnimator INSTANCE = new PreviewAnimator();
     private boolean playing;
+    private boolean loop = false; // Default to no loop
     private int time;
 
     private boolean constantSpeed = true;
@@ -51,8 +52,13 @@ public class PreviewAnimator {
             segDistance += Math.max(0f, speedBlocksPerSec) * dt;
         } else {
             if (time >= CameraAnimIdeCache.getPath().getLength()) {
-                // Wrap seamlessly to the beginning to avoid a one-frame stall at the end
-                time = 0;
+                if (loop) {
+                    // Wrap seamlessly to the beginning to avoid a one-frame stall at the end
+                    time = 0;
+                } else {
+                    // Stop playing when reaching the end
+                    playing = false;
+                }
             } else {
                 time++;
             }
@@ -144,8 +150,8 @@ public class PreviewAnimator {
         }
         
         if (nextEntry == null) {
-            if (speedMode == SpeedMode.SPEED && track.getPoints().size() >= 2) {
-                // Loop to start in SPEED mode
+            if (speedMode == SpeedMode.SPEED && loop && track.getPoints().size() >= 2) {
+                // Loop to start in SPEED mode (only if loop is enabled)
                 Map.Entry<Integer, CameraKeyframe> first = track.getNextEntry(Integer.MIN_VALUE);
                 Map.Entry<Integer, CameraKeyframe> second = first == null ? null : track.getNextEntry(first.getKey());
                 if (first != null && second != null) {
@@ -156,12 +162,16 @@ public class PreviewAnimator {
                     preEntry = first;
                     nextEntry = second;
                 } else {
+                    // Stop at the end if not looping or can't loop
+                    if (playing) playing = false;
                     posDest.set(preEntry.getValue().getPos());
                     rotDest.set(preEntry.getValue().getRot());
                     fov[0] = preEntry.getValue().getFov();
                     return true;
                 }
             } else {
+                // Stop at the end if not looping
+                if (playing) playing = false;
                 posDest.set(preEntry.getValue().getPos());
                 rotDest.set(preEntry.getValue().getRot());
                 fov[0] = preEntry.getValue().getFov();
@@ -181,12 +191,18 @@ public class PreviewAnimator {
                 Map.Entry<Integer, CameraKeyframe> newPre = nextEntry;
                 Map.Entry<Integer, CameraKeyframe> newNext = track.getNextEntry(newPre.getKey());
                 if (newNext == null) {
-                    // loop
-                    Map.Entry<Integer, CameraKeyframe> first = track.getNextEntry(Integer.MIN_VALUE);
-                    if (first == null) break;
-                    newPre = first;
-                    newNext = track.getNextEntry(newPre.getKey());
-                    if (newNext == null) break;
+                    if (loop) {
+                        // loop (only if loop is enabled)
+                        Map.Entry<Integer, CameraKeyframe> first = track.getNextEntry(Integer.MIN_VALUE);
+                        if (first == null) break;
+                        newPre = first;
+                        newNext = track.getNextEntry(newPre.getKey());
+                        if (newNext == null) break;
+                    } else {
+                        // Stop at the end if not looping
+                        playing = false;
+                        break;
+                    }
                 }
                 preEntry = newPre;
                 nextEntry = newNext;
@@ -356,6 +372,8 @@ public class PreviewAnimator {
         currentLUT.lut = new net.tysontheember.apertureapi.path.ArcLengthLUT(f, 64);
     }
 
+    public PreviewAnimator setLoop(boolean loop) { this.loop = loop; return this; }
+    public boolean isLoop() { return loop; }
     public PreviewAnimator setConstantSpeed(boolean enabled) { this.constantSpeed = enabled; return this; }
     public PreviewAnimator setQuaternionOrientation(boolean enabled) { this.quaternionOrientation = enabled; return this; }
     public PreviewAnimator setSpeedMode(SpeedMode mode) { this.speedMode = mode == null ? SpeedMode.DURATION : mode; return this; }

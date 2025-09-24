@@ -54,8 +54,8 @@ public class PathInterpolationEngine {
                 if (right.lengthSquared() > 1e-6f) {
                     right.normalize();
                     float bankAngle = right.dot(velocity) * bankingStrength * (float)(Math.PI / 6); // Max 30 degrees
-                    Quaternionf banking = new Quaternionf().rotateAxis(bankAngle, velocity);
-                    result.mul(banking);
+                    Quaternionf bankingRotation = new Quaternionf().rotateAxis(bankAngle, velocity);
+                    result.mul(bankingRotation);
                 }
             }
         }

@@ -108,6 +108,14 @@ public class PathSystemTest {
         PathModel path = PathEvaluator.createSimplePath("test", 
             new Vector3f(0, 0, 0), new Vector3f(20, 0, 0), 5.0f);
         
+        // Use linear interpolation and easing for truly constant speed
+        path.getDefaults().interpolationType = InterpolationType.LINEAR;
+        path.getDefaults().easingType = EasingType.LINEAR;
+        
+        // Verify arc length calculation for straight line
+        float totalLength = PathEvaluator.getTotalLength(path);
+        assertEquals(20f, totalLength, 0.1f);
+        
         // Switch to speed mode: 2 blocks per second
         path.getSpeed().setSpeedMode(2.0f);
         

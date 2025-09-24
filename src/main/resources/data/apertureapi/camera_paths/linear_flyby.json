@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "id": "linear_flyby",
+  "loop": false,
+  "speed": 1.0,
+  "keyframes": [
+    { "time": 0, "pos": { "x": 0, "y": 80, "z": 0 }, "rot": { "yaw": 90, "pitch": -5 } },
+    { "time": 4, "pos": { "x": 20, "y": 82, "z": 0 }, "rot": { "yaw": 90, "pitch": -5 } }
+  ],
+  "path": { "position": { "interp": "linear" }, "rotation": { "interp": "lerp" } }
+}

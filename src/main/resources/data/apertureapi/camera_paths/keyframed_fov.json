@@ -1,0 +1,16 @@
+{
+  "schema": 1,
+  "id": "keyframed_fov",
+  "loop": false,
+  "speed": 1.0,
+  "fov": { "mode": "keyframed", "default": 70.0 },
+  "keyframes": [
+    { "time": 0.0, "pos": { "x": 0,  "y": 70, "z": -10 }, "rot": { "yaw": 0, "pitch": 0 },   "fov": 60.0 },
+    { "time": 1.5, "pos": { "x": 0,  "y": 71, "z": -6  },  "rot": { "yaw": 0, "pitch": -2 }, "fov": 75.0 },
+    { "time": 3.0, "pos": { "x": 0,  "y": 72, "z": -2  },  "rot": { "yaw": 0, "pitch": -4 }, "fov": 90.0 }
+  ],
+  "path": {
+    "position": { "interp": "linear" },
+    "rotation": { "interp": "lerp" }
+  }
+}

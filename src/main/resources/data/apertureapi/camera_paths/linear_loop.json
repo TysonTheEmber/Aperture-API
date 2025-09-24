@@ -1,0 +1,12 @@
+{
+  "schema": 1,
+  "id": "linear_loop",
+  "loop": true,
+  "speed": 1.0,
+  "keyframes": [
+    { "time": 0.0, "pos": { "x": 0, "y": 70, "z": 0 }, "rot": { "yaw": 0, "pitch": 0 } },
+    { "time": 2.0, "pos": { "x": 16, "y": 70, "z": 0 }, "rot": { "yaw": 0, "pitch": 0 } },
+    { "time": 4.0, "pos": { "x": 0, "y": 70, "z": 0 }, "rot": { "yaw": 0, "pitch": 0 } }
+  ],
+  "path": { "position": { "interp": "linear" }, "rotation": { "interp": "lerp" } }
+}

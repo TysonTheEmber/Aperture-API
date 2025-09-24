@@ -94,6 +94,12 @@ public class OnLevelRender {
         CAMERA_CACHE.set(p.x, p.y, p.z);
         SelectedPoint selected = getSelectedPoint();
 
+        // Optional debug path overlay using advanced sampler (velocity color/ticks)
+        if (net.tysontheember.apertureapi.client.render.PathDebugRenderer.showVelocityColor ||
+            net.tysontheember.apertureapi.client.render.PathDebugRenderer.showDirectionTicks) {
+            net.tysontheember.apertureapi.client.render.PathDebugRenderer.render(getPath(), last, bufferSource, p);
+        }
+
         // Lines pass
         renderLines(selected, bufferSource, last);
         // Filled triangles pass
@@ -257,6 +263,17 @@ private static final ICameraModifier PLAYER_MODIFIER = CameraModifierManager
 
             switch (p2.getPathInterpolator()) {
                 case LINEAR -> addLine(buffer, last, v1, v2, 0xffffffff);
+                case COSINE -> {
+                    // cosine easing along the straight segment
+                    for (int t = 1; t <= 20; t++) {
+                        float raw = 0.05f * t;
+                        float f = (1.0f - (float) Math.cos(Math.PI * raw)) * 0.5f;
+                        V_CACHE_3.set(v1).lerp(v2, f);
+                        addLine(buffer, last, (t == 1 ? v1 : V_CACHE_4), V_CACHE_3, 0xffffffff);
+                        V_CACHE_4.set(V_CACHE_3);
+                    }
+                    addLine(buffer, last, V_CACHE_4, v2, 0xffffffff);
+                }
                 case SMOOTH -> {
                     Vector3f v0;
                     Vector3f v3;
@@ -276,6 +293,28 @@ private static final ICameraModifier PLAYER_MODIFIER = CameraModifierManager
                     }
 
                     addSmoothLine(buffer, last, v0, v1, v2, v3, 0xffffffff);
+                }
+                case CATMULL_UNIFORM, CATMULL_CENTRIPETAL, CATMULL_CHORDAL -> {
+                    Vector3f v0;
+                    Vector3f v3;
+                    if (i > 1) {
+                        CameraKeyframe p = points.get(i - 2);
+                        v0 = V_CACHE_3.set(p.getPos()).sub(CAMERA_CACHE);
+                    } else {
+                        v0 = v1;
+                    }
+                    if (i < c - 1) {
+                        CameraKeyframe p = points.get(i + 1);
+                        v3 = V_CACHE_4.set(p.getPos()).sub(CAMERA_CACHE);
+                    } else {
+                        v3 = v2;
+                    }
+                    float alpha = switch (p2.getPathInterpolator()) {
+                        case CATMULL_UNIFORM -> 0.0f;
+                        case CATMULL_CHORDAL -> 1.0f;
+                        default -> 0.5f;
+                    };
+                    addCatmullAlphaLine(buffer, last, v0, v1, v2, v3, alpha, 0xffffffff);
                 }
                 case BEZIER -> {
                     Vec3BezierController controller = p2.getPathBezier();
@@ -494,6 +533,19 @@ private static final ICameraModifier PLAYER_MODIFIER = CameraModifierManager
             pos1.set(pos2);
         }
 
+        addLine(buffer, pose, pos2, p2, color);
+    }
+
+    // Uses V_CACHE_6 and V_CACHE_7
+    private static void addCatmullAlphaLine(VertexConsumer buffer, PoseStack.Pose pose, Vector3f pre, Vector3f p1, Vector3f p2, Vector3f after, float alpha, int color) {
+        Vector3f pos1 = V_CACHE_6.set(p1);
+        Vector3f pos2 = V_CACHE_7.zero();
+        for (int i = 1; i <= 20; i++) {
+            float f = 0.05f * i;
+            net.tysontheember.apertureapi.path.CatmullRom.eval(f, pre, p1, p2, after, alpha, pos2);
+            addLine(buffer, pose, pos1, pos2, color);
+            pos1.set(pos2);
+        }
         addLine(buffer, pose, pos2, p2, color);
     }
 

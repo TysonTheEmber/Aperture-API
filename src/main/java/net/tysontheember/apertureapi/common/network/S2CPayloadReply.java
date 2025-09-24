@@ -80,6 +80,10 @@ public record S2CPayloadReply(CompoundTag tag) {
             net.tysontheember.apertureapi.client.preview.JsonCameraPreview.start(id);
             return null;
         });
+        HANDLERS.put("stopCamera", (tag, context) -> {
+            ClientPayloadManager.INSTANCE.stopCamera(context);
+            return null;
+        });
     }
 
     public static void encode(S2CPayloadReply pag, FriendlyByteBuf buf) {

@@ -109,5 +109,10 @@ public class ClientPayloadManager {
             });
         }
     }
+
+    public void stopCamera(NetworkEvent.Context context) {
+        // Gracefully request stop with fade-out
+        Animator.INSTANCE.stop();
+    }
 }
 

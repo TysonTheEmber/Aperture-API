@@ -84,6 +84,10 @@ public record S2CPayloadReply(CompoundTag tag) {
             ClientPayloadManager.INSTANCE.stopCamera(context);
             return null;
         });
+        HANDLERS.put("resetCamera", (tag, context) -> {
+            ClientPayloadManager.INSTANCE.resetCamera(context);
+            return null;
+        });
     }
 
     public static void encode(S2CPayloadReply pag, FriendlyByteBuf buf) {

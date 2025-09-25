@@ -34,13 +34,21 @@ public class CameraCommand {
                     .then(Commands.argument("speed", FloatArgumentType.floatArg(0.05f, 10f))
                         .suggests(CameraCommand::suggestSpeeds)
                         .then(Commands.argument("loop", com.mojang.brigadier.arguments.BoolArgumentType.bool())
-                            .then(Commands.argument("target", net.minecraft.commands.arguments.EntityArgument.player())
-                                .executes(CameraCommand::playForTarget))))))
+                            .executes(CameraCommand::playWithLoop)
+                            .then(Commands.argument("auto-reset", com.mojang.brigadier.arguments.BoolArgumentType.bool())
+                                .executes(CameraCommand::playWithOptions)
+                                .then(Commands.argument("target", net.minecraft.commands.arguments.EntityArgument.player())
+                                    .executes(CameraCommand::playForTargetWithOptions)))))))
             .then(Commands.literal("stop")
                 .executes(CameraCommand::stopSelf)
                 .then(Commands.argument("target", net.minecraft.commands.arguments.EntityArgument.player())
                     .requires(s -> CommandUtils.permCheck(s, 2))
                     .executes(CameraCommand::stopTarget)))
+            .then(Commands.literal("reset")
+                .executes(CameraCommand::resetSelf)
+                .then(Commands.argument("target", net.minecraft.commands.arguments.EntityArgument.player())
+                    .requires(s -> CommandUtils.permCheck(s, 2))
+                    .executes(CameraCommand::resetTarget)))
             .then(Commands.literal("interpolation").requires(s -> CommandUtils.permCheck(s, 2))
                 .then(Commands.argument("name", StringArgumentType.word()).suggests(PATH_SUGGESTER)
                     .then(Commands.argument("mode", StringArgumentType.word())
@@ -82,19 +90,87 @@ public class CameraCommand {
         return 1;
     }
 
+    private static int playWithLoop(CommandContext<CommandSourceStack> ctx) {
+        String name = StringArgumentType.getString(ctx, "name");
+        float speed = FloatArgumentType.getFloat(ctx, "speed");
+        boolean loop = com.mojang.brigadier.arguments.BoolArgumentType.getBool(ctx, "loop");
+        boolean autoReset = true; // Default auto-reset behavior
+        
+        ServerPlayer player;
+        try { player = ctx.getSource().getPlayerOrException(); } catch (Exception e) { CommandUtils.msgError(ctx.getSource(), "Player-only command"); return 0; }
+        ServerLevel level = CommandUtils.level(ctx.getSource());
+        GlobalCameraSavedData data = GlobalCameraSavedData.getData(level);
+        GlobalCameraPath path = data.getPath(name);
+        if (path == null) { CommandUtils.msgError(ctx.getSource(), "Unknown path: '" + name + "'"); return 0; }
+        
+        int receiver = calculateReceiver(loop, autoReset);
+        ServerPayloadSender.sendGlobalPath(path, player, receiver);
+        CommandUtils.msgInfo(ctx.getSource(), "Playing '" + name + "' (speed=" + speed + ", loop=" + loop + ", auto-reset=" + autoReset + ")");
+        return 1;
+    }
+
+    private static int playWithOptions(CommandContext<CommandSourceStack> ctx) {
+        String name = StringArgumentType.getString(ctx, "name");
+        float speed = FloatArgumentType.getFloat(ctx, "speed");
+        boolean loop = com.mojang.brigadier.arguments.BoolArgumentType.getBool(ctx, "loop");
+        boolean autoReset = com.mojang.brigadier.arguments.BoolArgumentType.getBool(ctx, "auto-reset");
+        
+        ServerPlayer player;
+        try { player = ctx.getSource().getPlayerOrException(); } catch (Exception e) { CommandUtils.msgError(ctx.getSource(), "Player-only command"); return 0; }
+        ServerLevel level = CommandUtils.level(ctx.getSource());
+        GlobalCameraSavedData data = GlobalCameraSavedData.getData(level);
+        GlobalCameraPath path = data.getPath(name);
+        if (path == null) { CommandUtils.msgError(ctx.getSource(), "Unknown path: '" + name + "'"); return 0; }
+        
+        int receiver = calculateReceiver(loop, autoReset);
+        ServerPayloadSender.sendGlobalPath(path, player, receiver);
+        CommandUtils.msgInfo(ctx.getSource(), "Playing '" + name + "' (speed=" + speed + ", loop=" + loop + ", auto-reset=" + autoReset + ")");
+        return 1;
+    }
+
     private static int playForTarget(CommandContext<CommandSourceStack> ctx) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
         String name = StringArgumentType.getString(ctx, "name");
         float speed = FloatArgumentType.getFloat(ctx, "speed");
         boolean loop = com.mojang.brigadier.arguments.BoolArgumentType.getBool(ctx, "loop");
+        boolean autoReset = true; // Default auto-reset behavior
         var target = net.minecraft.commands.arguments.EntityArgument.getPlayer(ctx, "target");
         ServerLevel level = CommandUtils.level(ctx.getSource());
         GlobalCameraSavedData data = GlobalCameraSavedData.getData(level);
         GlobalCameraPath path = data.getPath(name);
         if (path == null) { CommandUtils.msgError(ctx.getSource(), "Unknown path: '" + name + "'"); return 0; }
-        int receiver = loop ? 1 : 2;
+        
+        int receiver = calculateReceiver(loop, autoReset);
         ServerPayloadSender.sendGlobalPath(path, target, receiver);
-        CommandUtils.msgInfo(ctx.getSource(), "Playing '" + name + "' for " + target.getGameProfile().getName() + " at speed=" + speed + " loop=" + loop);
+        CommandUtils.msgInfo(ctx.getSource(), "Playing '" + name + "' for " + target.getGameProfile().getName() + " at speed=" + speed + " loop=" + loop + " auto-reset=" + autoReset);
         return 1;
+    }
+
+    private static int playForTargetWithOptions(CommandContext<CommandSourceStack> ctx) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+        String name = StringArgumentType.getString(ctx, "name");
+        float speed = FloatArgumentType.getFloat(ctx, "speed");
+        boolean loop = com.mojang.brigadier.arguments.BoolArgumentType.getBool(ctx, "loop");
+        boolean autoReset = com.mojang.brigadier.arguments.BoolArgumentType.getBool(ctx, "auto-reset");
+        var target = net.minecraft.commands.arguments.EntityArgument.getPlayer(ctx, "target");
+        ServerLevel level = CommandUtils.level(ctx.getSource());
+        GlobalCameraSavedData data = GlobalCameraSavedData.getData(level);
+        GlobalCameraPath path = data.getPath(name);
+        if (path == null) { CommandUtils.msgError(ctx.getSource(), "Unknown path: '" + name + "'"); return 0; }
+        
+        int receiver = calculateReceiver(loop, autoReset);
+        ServerPayloadSender.sendGlobalPath(path, target, receiver);
+        CommandUtils.msgInfo(ctx.getSource(), "Playing '" + name + "' for " + target.getGameProfile().getName() + " at speed=" + speed + " loop=" + loop + " auto-reset=" + autoReset);
+        return 1;
+    }
+
+    private static int calculateReceiver(boolean loop, boolean autoReset) {
+        // receiver codes:
+        // 1=loop with auto-reset, 2=one-shot with auto-reset
+        // 3=loop without auto-reset, 4=one-shot without auto-reset
+        if (autoReset) {
+            return loop ? 1 : 2;
+        } else {
+            return loop ? 3 : 4;
+        }
     }
 
     private static java.util.concurrent.CompletableFuture<Suggestions> suggestSpeeds(CommandContext<CommandSourceStack> ctx, SuggestionsBuilder b) {
@@ -131,6 +207,34 @@ public class CameraCommand {
             return 1;
         } catch (Exception e) {
             CommandUtils.msgError(ctx.getSource(), "Failed to stop for target: " + e.getMessage());
+            return 0;
+        }
+    }
+
+    private static int resetSelf(CommandContext<CommandSourceStack> ctx) {
+        try {
+            var player = ctx.getSource().getPlayerOrException();
+            net.minecraft.nbt.CompoundTag resetTag = new net.minecraft.nbt.CompoundTag();
+            resetTag.putBoolean("force_reset", true);
+            net.tysontheember.apertureapi.common.network.ServerPayloadSender.send("resetCamera", resetTag, player);
+            CommandUtils.msgInfo(ctx.getSource(), "Reset camera for " + player.getGameProfile().getName());
+            return 1;
+        } catch (Exception e) {
+            CommandUtils.msgError(ctx.getSource(), "Player-only command");
+            return 0;
+        }
+    }
+
+    private static int resetTarget(CommandContext<CommandSourceStack> ctx) {
+        try {
+            var target = net.minecraft.commands.arguments.EntityArgument.getPlayer(ctx, "target");
+            net.minecraft.nbt.CompoundTag resetTag = new net.minecraft.nbt.CompoundTag();
+            resetTag.putBoolean("force_reset", true);
+            net.tysontheember.apertureapi.common.network.ServerPayloadSender.send("resetCamera", resetTag, target);
+            CommandUtils.msgInfo(ctx.getSource(), "Reset camera for " + target.getGameProfile().getName());
+            return 1;
+        } catch (Exception e) {
+            CommandUtils.msgError(ctx.getSource(), "Failed to reset for target: " + e.getMessage());
             return 0;
         }
     }

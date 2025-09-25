@@ -19,6 +19,7 @@ public class Animator {
     private GlobalCameraPath path;
     private boolean playing;
     private boolean loop = true;
+    private boolean autoReset = true; // automatically reset camera when done playing (even for loops when stopped)
     private int time;
     private boolean exiting; // true while we are fading out before returning control
 
@@ -54,8 +55,13 @@ public class Animator {
                 // Wrap seamlessly to the beginning
                 time = 0;
             } else {
-                // Begin exit fade, do not snap camera yet
-                beginExitSequence();
+                // Begin exit fade if auto-reset is enabled
+                if (autoReset) {
+                    beginExitSequence();
+                } else {
+                    // Just stop without resetting camera
+                    playing = false;
+                }
             }
         } else {
             time++;
@@ -67,13 +73,26 @@ public class Animator {
     }
 
     public void stop() {
-        // Request graceful exit; don't snap camera
-        beginExitSequence();
+        // Request graceful exit; don't snap camera (only if auto-reset is enabled)
+        if (autoReset) {
+            beginExitSequence();
+        } else {
+            // Just stop playing without resetting camera
+            playing = false;
+            path = null;
+            time = 0;
+            exiting = false;
+        }
     }
 
     public void reset() {
-        // Request graceful exit; don't snap camera
-        beginExitSequence();
+        // Request graceful exit; don't snap camera (only if auto-reset is enabled)
+        if (autoReset) {
+            beginExitSequence();
+        } else {
+            // Just reset time without changing camera
+            time = 0;
+        }
     }
 
     private void beginExitSequence() {
@@ -105,6 +124,13 @@ public class Animator {
     }
 
     public boolean isLoop() { return loop; }
+
+    public Animator setAutoReset(boolean autoReset) {
+        this.autoReset = autoReset;
+        return this;
+    }
+
+    public boolean isAutoReset() { return autoReset; }
 
     public int getTime() {
         return time;

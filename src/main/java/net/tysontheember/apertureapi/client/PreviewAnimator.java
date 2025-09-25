@@ -46,7 +46,7 @@ public class PreviewAnimator {
             return;
         }
 
-        if (speedMode == SpeedMode.SPEED) {
+            if (speedMode == SpeedMode.SPEED) {
             // Advance by distance per tick; segment wrap handled in prepareCameraInfo
             float dt = 1.0f / 20.0f;
             segDistance += Math.max(0f, speedBlocksPerSec) * dt;
@@ -56,8 +56,8 @@ public class PreviewAnimator {
                     // Wrap seamlessly to the beginning to avoid a one-frame stall at the end
                     time = 0;
                 } else {
-                    // Stop playing when reaching the end
-                    playing = false;
+                    // Stop playing when reaching the end and hand camera control back
+                    finishPreview();
                 }
             } else {
                 time++;
@@ -71,6 +71,10 @@ public class PreviewAnimator {
 
     public void stop() {
         playing = false;
+        // Exit preview mode so camera control returns to the player
+        try { net.tysontheember.apertureapi.client.CameraAnimIdeCache.PREVIEW = false; } catch (Throwable ignored) {}
+        // Reset internal state to start from the beginning next time
+        reset();
     }
 
     public void reset() {
@@ -81,6 +85,13 @@ public class PreviewAnimator {
         segPreTime = null;
         segNextTime = null;
         hasLastAimDir = false;
+    }
+
+    // End preview gracefully: return camera control to player and reset for next run
+    private void finishPreview() {
+        playing = false;
+        try { net.tysontheember.apertureapi.client.CameraAnimIdeCache.PREVIEW = false; } catch (Throwable ignored) {}
+        reset();
     }
 
     public int getTime() {
@@ -163,7 +174,7 @@ public class PreviewAnimator {
                     nextEntry = second;
                 } else {
                     // Stop at the end if not looping or can't loop
-                    if (playing) playing = false;
+                    finishPreview();
                     posDest.set(preEntry.getValue().getPos());
                     rotDest.set(preEntry.getValue().getRot());
                     fov[0] = preEntry.getValue().getFov();
@@ -171,7 +182,7 @@ public class PreviewAnimator {
                 }
             } else {
                 // Stop at the end if not looping
-                if (playing) playing = false;
+                finishPreview();
                 posDest.set(preEntry.getValue().getPos());
                 rotDest.set(preEntry.getValue().getRot());
                 fov[0] = preEntry.getValue().getFov();

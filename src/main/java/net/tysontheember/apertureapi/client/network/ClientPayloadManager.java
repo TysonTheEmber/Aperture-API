@@ -95,6 +95,30 @@ public class ClientPayloadManager {
                     });
                 }
             }
+            case 3 -> {
+                if (succeed && path != null) {
+                    final GlobalCameraPath pth = path;
+                    // Gate start until screen is fully black - loop with auto-reset disabled
+                    net.tysontheember.apertureapi.client.gui.overlay.CutsceneFadeOverlay.startEnterSequence(() -> {
+                        Animator.INSTANCE.setLoop(true).setAutoReset(false).setPathAndPlay(pth);
+                        // Notify server we are in a cutscene now
+                        ClientPayloadSender.cutsceneInvul(true);
+                        ClientUtil.toThirdView();
+                    });
+                }
+            }
+            case 4 -> {
+                if (succeed && path != null) {
+                    final GlobalCameraPath pth = path;
+                    // Gate start until screen is fully black - one-shot with auto-reset disabled
+                    net.tysontheember.apertureapi.client.gui.overlay.CutsceneFadeOverlay.startEnterSequence(() -> {
+                        Animator.INSTANCE.setLoop(false).setAutoReset(false).setPathAndPlay(pth);
+                        // Notify server we are in a cutscene now
+                        ClientPayloadSender.cutsceneInvul(true);
+                        ClientUtil.toThirdView();
+                    });
+                }
+            }
         }
     }
 
@@ -113,6 +137,11 @@ public class ClientPayloadManager {
     public void stopCamera(NetworkEvent.Context context) {
         // Gracefully request stop with fade-out
         Animator.INSTANCE.stop();
+    }
+
+    public void resetCamera(NetworkEvent.Context context) {
+        // Force reset camera to player position, always with fade-out
+        Animator.INSTANCE.setAutoReset(true).stop();
     }
 }
 

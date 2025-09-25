@@ -3,14 +3,13 @@ package net.tysontheember.apertureapi.common.animation;
 import java.util.HashMap;
 
 public class LevelGlobalCameraTrack {
-    private final HashMap<String, GlobalCameraPath> trackMap = new HashMap<>();
+  private final HashMap<String, GlobalCameraPath> trackMap = new HashMap<>();
 
-    public void addTrack(String name, GlobalCameraPath track) {
-        trackMap.put(name, track);
-    }
+  public void addTrack(String name, GlobalCameraPath track) {
+    trackMap.put(name, track);
+  }
 
-    public GlobalCameraPath getTrack(String name) {
-        return trackMap.get(name);
-    }
+  public GlobalCameraPath getTrack(String name) {
+    return trackMap.get(name);
+  }
 }
-

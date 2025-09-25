@@ -1,74 +1,72 @@
 package net.tysontheember.apertureapi.client.listener;
 
-import net.tysontheember.apertureapi.ApertureAPI;
-import net.tysontheember.apertureapi.client.CameraAnimIdeCache;
+import static net.tysontheember.apertureapi.client.ClientUtil.*;
+
 import net.minecraft.client.Minecraft;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.InputEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
+import net.tysontheember.apertureapi.ApertureAPI;
+import net.tysontheember.apertureapi.client.CameraAnimIdeCache;
 import org.lwjgl.glfw.GLFW;
-
-import static net.tysontheember.apertureapi.client.ClientUtil.*;
 
 @Mod.EventBusSubscriber(modid = ApertureAPI.MODID, value = Dist.CLIENT)
 public class MouseInput {
-    @SubscribeEvent
-    public static void onMouseReleased(InputEvent.MouseButton.Pre event) {
-        if (Minecraft.getInstance().screen != null) {
-            return;
-        }
-
-        switch (event.getButton()) {
-            case GLFW.GLFW_MOUSE_BUTTON_LEFT -> {
-                switch (event.getAction()) {
-                    case GLFW.GLFW_PRESS -> leftPress(event);
-                    case GLFW.GLFW_RELEASE -> release();
-                }
-            }
-            case GLFW.GLFW_MOUSE_BUTTON_RIGHT -> {
-                switch (event.getAction()) {
-                    case GLFW.GLFW_PRESS -> rightPress(event);
-                    case GLFW.GLFW_RELEASE -> release();
-                }
-            }
-        }
+  @SubscribeEvent
+  public static void onMouseReleased(InputEvent.MouseButton.Pre event) {
+    if (Minecraft.getInstance().screen != null) {
+      return;
     }
 
-    private static void leftPress(InputEvent.MouseButton.Pre event) {
-        if (!CameraAnimIdeCache.EDIT) {
-            return;
+    switch (event.getButton()) {
+      case GLFW.GLFW_MOUSE_BUTTON_LEFT -> {
+        switch (event.getAction()) {
+          case GLFW.GLFW_PRESS -> leftPress(event);
+          case GLFW.GLFW_RELEASE -> release();
         }
-        // In edit mode, consume the mouse click so the game doesn't handle it
-        event.setCanceled(true);
-        CameraAnimIdeCache.leftPick(playerEyePos(), playerView(), 6);
+      }
+      case GLFW.GLFW_MOUSE_BUTTON_RIGHT -> {
+        switch (event.getAction()) {
+          case GLFW.GLFW_PRESS -> rightPress(event);
+          case GLFW.GLFW_RELEASE -> release();
+        }
+      }
+    }
+  }
+
+  private static void leftPress(InputEvent.MouseButton.Pre event) {
+    if (!CameraAnimIdeCache.EDIT) {
+      return;
+    }
+    // In edit mode, consume the mouse click so the game doesn't handle it
+    event.setCanceled(true);
+    CameraAnimIdeCache.leftPick(playerEyePos(), playerView(), 6);
+  }
+
+  private static void rightPress(InputEvent.MouseButton.Pre event) {
+    if (!CameraAnimIdeCache.EDIT) {
+      return;
     }
 
-    private static void rightPress(InputEvent.MouseButton.Pre event) {
-        if (!CameraAnimIdeCache.EDIT) {
-            return;
-        }
+    event.setCanceled(true);
+    CameraAnimIdeCache.rightPick(playerEyePos(), playerView(), 6);
+  }
 
-        event.setCanceled(true);
-        CameraAnimIdeCache.rightPick(playerEyePos(), playerView(), 6);
+  private static void release() {
+    if (!CameraAnimIdeCache.EDIT) {
+      return;
     }
 
-    private static void release() {
-        if (!CameraAnimIdeCache.EDIT) {
-            return;
-        }
+    switch (CameraAnimIdeCache.getMode()) {
+      case NONE -> {}
+      case MOVE, ROTATE -> {
+        CameraAnimIdeCache.MoveModeData moveData = CameraAnimIdeCache.getMoveMode();
 
-        switch (CameraAnimIdeCache.getMode()) {
-            case NONE -> {
-            }
-            case MOVE, ROTATE -> {
-                CameraAnimIdeCache.MoveModeData moveData = CameraAnimIdeCache.getMoveMode();
-
-                if (moveData.getMoveType() != CameraAnimIdeCache.MoveType.NONE) {
-                    moveData.reset();
-                }
-            }
+        if (moveData.getMoveType() != CameraAnimIdeCache.MoveType.NONE) {
+          moveData.reset();
         }
+      }
     }
+  }
 }
-

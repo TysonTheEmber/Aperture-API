@@ -1,6 +1,7 @@
 package net.tysontheember.apertureapi.client.gui.overlay;
 
 import com.mojang.blaze3d.systems.RenderSystem;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.gui.overlay.ForgeGui;
@@ -35,6 +36,9 @@ public class CutsceneFadeOverlay implements IGuiOverlay {
   private static Runnable atBlackCallback = null;
   private static Runnable atBlackExitCallback = null;
 
+  // Track GUI hidden state so we can restore to the player's prior preference
+  private static Boolean prevHideGui = null;
+
   // Backward-compatible starter (no gating)
   public static void onCutsceneStart() {
     startEnterSequence(null);
@@ -45,6 +49,13 @@ public class CutsceneFadeOverlay implements IGuiOverlay {
     enterOutTicks = CommonConf.CUTSCENE_ENTER_FADE_OUT_TICKS.get();
     enterInTicks = CommonConf.CUTSCENE_ENTER_FADE_IN_TICKS.get();
     atBlackCallback = atBlack;
+
+    // Capture current HUD visibility; actual hiding is applied after enter fade completes
+    try {
+      if (prevHideGui == null) {
+        prevHideGui = Minecraft.getInstance().options.hideGui;
+      }
+    } catch (Throwable ignored) {}
 
     if (enterOutTicks > 0) {
       phase = Phase.ENTER_OUT;
@@ -119,6 +130,13 @@ public class CutsceneFadeOverlay implements IGuiOverlay {
       phase = Phase.IDLE;
       phaseTimer = 0;
       phaseDuration = 0;
+      // Restore HUD immediately for the no-fade case
+      try {
+        if (prevHideGui != null) {
+          Minecraft.getInstance().options.hideGui = prevHideGui;
+          prevHideGui = null;
+        }
+      } catch (Throwable ignored) {}
     }
   }
 
@@ -146,9 +164,23 @@ public class CutsceneFadeOverlay implements IGuiOverlay {
             phaseTimer = 0;
           } else {
             phase = Phase.IDLE;
+            // Enter sequence finished immediately: now hide HUD for the cutscene
+            try {
+              if (prevHideGui != null) {
+                Minecraft.getInstance().options.hideGui = true;
+              }
+            } catch (Throwable ignored) {}
           }
         }
-        case ENTER_IN -> phase = Phase.IDLE;
+        case ENTER_IN -> {
+          phase = Phase.IDLE;
+          // Enter fade-in finished: now hide HUD for the cutscene
+          try {
+            if (prevHideGui != null) {
+              Minecraft.getInstance().options.hideGui = true;
+            }
+          } catch (Throwable ignored) {}
+        }
         case EXIT_OUT -> {
           // We just reached full black on exit; run the exit callback once, then proceed
           if (atBlackExitCallback != null) {
@@ -165,9 +197,25 @@ public class CutsceneFadeOverlay implements IGuiOverlay {
             phaseTimer = 0;
           } else {
             phase = Phase.IDLE;
+            // Restore HUD once the exit sequence completes with no fade-in phase
+            try {
+              if (prevHideGui != null) {
+                Minecraft.getInstance().options.hideGui = prevHideGui;
+                prevHideGui = null;
+              }
+            } catch (Throwable ignored) {}
           }
         }
-        case EXIT_IN -> phase = Phase.IDLE;
+        case EXIT_IN -> {
+          phase = Phase.IDLE;
+          // Restore HUD once the exit fade-in completes
+          try {
+            if (prevHideGui != null) {
+              Minecraft.getInstance().options.hideGui = prevHideGui;
+              prevHideGui = null;
+            }
+          } catch (Throwable ignored) {}
+        }
         case IDLE -> {}
       }
     }
@@ -182,9 +230,13 @@ public class CutsceneFadeOverlay implements IGuiOverlay {
     int a = Math.min(255, Math.max(0, (int) (alpha * 255)));
     int color = (a << 24) | 0x000000; // ARGB black with alpha
 
-    // Ensure blending is enabled for alpha
+    // Ensure blending is enabled for alpha and restore state after drawing
     RenderSystem.enableBlend();
+    RenderSystem.defaultBlendFunc();
+    RenderSystem.disableDepthTest();
     g.fill(0, 0, screenWidth, screenHeight, color);
+    RenderSystem.enableDepthTest();
+    RenderSystem.disableBlend();
   }
 
   private static float currentAlpha() {
@@ -200,5 +252,10 @@ public class CutsceneFadeOverlay implements IGuiOverlay {
       case EXIT_IN -> 1f - t; // 1 -> 0 (from black)
       case IDLE -> 0f;
     };
+  }
+
+  // Public accessor so other systems can respond to an active fade (e.g., suppress chat overlay)
+  public static boolean isActive() {
+    return phase != Phase.IDLE;
   }
 }

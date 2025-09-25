@@ -27,6 +27,10 @@ public class ModifyModeOverlay implements IGuiOverlay {
   @Override
   public void render(
       ForgeGui gui, GuiGraphics guiGraphics, float partialTick, int screenWidth, int screenHeight) {
+    // Respect global HUD hidden state (e.g., while in a cutscene)
+    if (net.minecraft.client.Minecraft.getInstance().options.hideGui) {
+      return;
+    }
     if (CameraAnimIdeCache.EDIT) {
       int i = 0;
       guiGraphics.drawString(

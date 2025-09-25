@@ -1,126 +1,145 @@
 package net.tysontheember.apertureapi.common.network;
 
-import net.tysontheember.apertureapi.client.network.ClientPayloadManager;
-import net.tysontheember.apertureapi.common.ModNetwork;
-import net.tysontheember.apertureapi.common.animation.GlobalCameraPath;
-import net.tysontheember.apertureapi.common.data_entity.GlobalCameraPathInfo;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.function.BiFunction;
+import java.util.function.Supplier;
 import net.minecraft.client.Minecraft;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.entity.Entity;
 import net.minecraftforge.network.NetworkEvent;
-
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.function.BiFunction;
-import java.util.function.Supplier;
+import net.tysontheember.apertureapi.client.network.ClientPayloadManager;
+import net.tysontheember.apertureapi.common.ModNetwork;
+import net.tysontheember.apertureapi.common.animation.GlobalCameraPath;
+import net.tysontheember.apertureapi.common.data_entity.GlobalCameraPathInfo;
 
 public record S2CPayloadReply(CompoundTag tag) {
-    private static final HashMap<String, BiFunction<CompoundTag, NetworkEvent.Context, CompoundTag>> HANDLERS = new HashMap<>();
+  private static final HashMap<String, BiFunction<CompoundTag, NetworkEvent.Context, CompoundTag>>
+      HANDLERS = new HashMap<>();
 
-    static {
-        HANDLERS.put("checkGlobalPath", (tag, context) -> {
-            boolean succeed = tag.getBoolean("succeed");
-            ArrayList<GlobalCameraPathInfo> paths;
+  static {
+    HANDLERS.put(
+        "checkGlobalPath",
+        (tag, context) -> {
+          boolean succeed = tag.getBoolean("succeed");
+          ArrayList<GlobalCameraPathInfo> paths;
 
-            if (succeed) {
-                paths = new ArrayList<>();
-                ListTag list = tag.getList("paths", CompoundTag.TAG_COMPOUND);
+          if (succeed) {
+            paths = new ArrayList<>();
+            ListTag list = tag.getList("paths", CompoundTag.TAG_COMPOUND);
 
-                for (int i = 0; i < list.size(); i++) {
-                    paths.add(GlobalCameraPathInfo.fromNBT(list.getCompound(i)));
-                }
-            } else {
-                paths = null;
+            for (int i = 0; i < list.size(); i++) {
+              paths.add(GlobalCameraPathInfo.fromNBT(list.getCompound(i)));
             }
+          } else {
+            paths = null;
+          }
 
-            ClientPayloadManager.INSTANCE.checkGlobalPath(tag.getInt("page"), tag.getInt("size"), succeed, paths, context);
-            return null;
+          ClientPayloadManager.INSTANCE.checkGlobalPath(
+              tag.getInt("page"), tag.getInt("size"), succeed, paths, context);
+          return null;
         });
-        HANDLERS.put("putGlobalPath", (tag, context) -> {
-            ClientPayloadManager.INSTANCE.putGlobalPath(tag.getBoolean("succeed"), context);
-            return null;
+    HANDLERS.put(
+        "putGlobalPath",
+        (tag, context) -> {
+          ClientPayloadManager.INSTANCE.putGlobalPath(tag.getBoolean("succeed"), context);
+          return null;
         });
-        HANDLERS.put("removeGlobalPath", (tag, context) -> {
-            ClientPayloadManager.INSTANCE.removeGlobalPath(tag.getBoolean("succeed"), context);
-            return null;
+    HANDLERS.put(
+        "removeGlobalPath",
+        (tag, context) -> {
+          ClientPayloadManager.INSTANCE.removeGlobalPath(tag.getBoolean("succeed"), context);
+          return null;
         });
-        HANDLERS.put("getGlobalPath", (tag, context) -> {
-            boolean succeed = tag.getBoolean("succeed");
-            GlobalCameraPath path;
+    HANDLERS.put(
+        "getGlobalPath",
+        (tag, context) -> {
+          boolean succeed = tag.getBoolean("succeed");
+          GlobalCameraPath path;
 
-            if (succeed) {
-                path = GlobalCameraPath.fromNBT(tag.getCompound("path"));
-            } else {
-                path = null;
-            }
+          if (succeed) {
+            path = GlobalCameraPath.fromNBT(tag.getCompound("path"));
+          } else {
+            path = null;
+          }
 
-            ClientPayloadManager.INSTANCE.getGlobalPath(path, succeed, tag.getInt("receiver"), context);
-            return null;
+          ClientPayloadManager.INSTANCE.getGlobalPath(
+              path, succeed, tag.getInt("receiver"), context);
+          return null;
         });
-        HANDLERS.put("getNativePath", (tag, context) -> {
-            boolean succeed = tag.getBoolean("succeed");
-            GlobalCameraPath path;
-            Entity entity;
+    HANDLERS.put(
+        "getNativePath",
+        (tag, context) -> {
+          boolean succeed = tag.getBoolean("succeed");
+          GlobalCameraPath path;
+          Entity entity;
 
-            if (succeed) {
-                path = GlobalCameraPath.fromNBT(tag.getCompound("path"));
-                entity = Minecraft.getInstance().level.getEntity(tag.getInt("center"));
-            } else {
-                path = null;
-                entity = null;
-            }
+          if (succeed) {
+            path = GlobalCameraPath.fromNBT(tag.getCompound("path"));
+            entity = Minecraft.getInstance().level.getEntity(tag.getInt("center"));
+          } else {
+            path = null;
+            entity = null;
+          }
 
-            ClientPayloadManager.INSTANCE.getNativePath(path, entity, succeed, context);
-            return null;
+          ClientPayloadManager.INSTANCE.getNativePath(path, entity, succeed, context);
+          return null;
         });
-        HANDLERS.put("playJsonPath", (tag, context) -> {
-            String id = tag.getString("id");
-            net.tysontheember.apertureapi.client.preview.JsonCameraPreview.start(id);
-            return null;
+    HANDLERS.put(
+        "playJsonPath",
+        (tag, context) -> {
+          String id = tag.getString("id");
+          net.tysontheember.apertureapi.client.preview.JsonCameraPreview.start(id);
+          return null;
         });
-        HANDLERS.put("stopCamera", (tag, context) -> {
-            ClientPayloadManager.INSTANCE.stopCamera(context);
-            return null;
+    HANDLERS.put(
+        "stopCamera",
+        (tag, context) -> {
+          ClientPayloadManager.INSTANCE.stopCamera(context);
+          return null;
         });
-        HANDLERS.put("resetCamera", (tag, context) -> {
-            ClientPayloadManager.INSTANCE.resetCamera(context);
-            return null;
+    HANDLERS.put(
+        "resetCamera",
+        (tag, context) -> {
+          ClientPayloadManager.INSTANCE.resetCamera(context);
+          return null;
         });
-    }
+  }
 
-    public static void encode(S2CPayloadReply pag, FriendlyByteBuf buf) {
-        buf.writeNbt(pag.tag);
-    }
+  public static void encode(S2CPayloadReply pag, FriendlyByteBuf buf) {
+    buf.writeNbt(pag.tag);
+  }
 
-    public static S2CPayloadReply decode(FriendlyByteBuf bug) {
-        return new S2CPayloadReply(bug.readNbt());
-    }
+  public static S2CPayloadReply decode(FriendlyByteBuf bug) {
+    return new S2CPayloadReply(bug.readNbt());
+  }
 
-    public static void handle(S2CPayloadReply payload, Supplier<NetworkEvent.Context> contextSupplier) {
-        NetworkEvent.Context context = contextSupplier.get();
-        context.enqueueWork(() -> {
-            String key = payload.tag.getString("key");
-            BiFunction<CompoundTag, NetworkEvent.Context, CompoundTag> handler = HANDLERS.get(key);
+  public static void handle(
+      S2CPayloadReply payload, Supplier<NetworkEvent.Context> contextSupplier) {
+    NetworkEvent.Context context = contextSupplier.get();
+    context.enqueueWork(
+        () -> {
+          String key = payload.tag.getString("key");
+          BiFunction<CompoundTag, NetworkEvent.Context, CompoundTag> handler = HANDLERS.get(key);
 
-            if (handler == null) {
-                return;
-            }
+          if (handler == null) {
+            return;
+          }
 
-            CompoundTag result = handler.apply(payload.tag.getCompound("value"), context);
+          CompoundTag result = handler.apply(payload.tag.getCompound("value"), context);
 
-            if (result == null) {
-                return;
-            }
+          if (result == null) {
+            return;
+          }
 
-            CompoundTag root = new CompoundTag();
-            root.putString("key", key);
-            root.put("value", result);
+          CompoundTag root = new CompoundTag();
+          root.putString("key", key);
+          root.put("value", result);
 
-            ModNetwork.INSTANCE.reply(new C2SPayloadManager(root), context);
+          ModNetwork.INSTANCE.reply(new C2SPayloadManager(root), context);
         });
-        context.setPacketHandled(true);
-    }
+    context.setPacketHandled(true);
+  }
 }
-
